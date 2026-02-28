@@ -1,0 +1,142 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "ZeroDay.log",
+      "tone": "Tactical, Mysterious, Elite, Minimalist",
+      "archetype": "The Performance Pro / Electric Neon Hybrid",
+      "description": "A dark-mode-first CTF writeup repository that feels like a terminal interface upgraded for the year 2077. Prioritizes reading experience (The 'Medium' of hackers) with subtle cyberpunk aesthetics."
+    },
+    "typography": {
+      "font_family_heading": "Unbounded, 'JetBrains Mono', monospace",
+      "font_family_body": "'DM Sans', sans-serif",
+      "font_family_code": "'JetBrains Mono', monospace",
+      "scale": {
+        "display": "text-5xl md:text-7xl font-black tracking-tight",
+        "h1": "text-4xl md:text-5xl font-bold tracking-tighter",
+        "h2": "text-2xl md:text-3xl font-bold tracking-tight",
+        "h3": "text-xl font-medium tracking-normal text-neon-green",
+        "body_lg": "text-lg leading-relaxed text-gray-300",
+        "body": "text-base leading-7 text-gray-400",
+        "caption": "text-xs font-mono text-gray-500 uppercase tracking-widest"
+      },
+      "imports": [
+        "@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap');"
+      ]
+    },
+    "colors": {
+      "background": {
+        "default": "#050505",
+        "surface": "#0A0A0A",
+        "surface_highlight": "#111111"
+      },
+      "border": {
+        "default": "#222222",
+        "active": "#333333",
+        "highlight": "#444444"
+      },
+      "text": {
+        "primary": "#EDEDED",
+        "secondary": "#A1A1AA",
+        "muted": "#52525B",
+        "inverse": "#000000"
+      },
+      "accent": {
+        "primary": "#00E599", 
+        "secondary": "#FAFF00",
+        "danger": "#FF2E2E",
+        "info": "#00B8D4"
+      },
+      "gradients": {
+        "hero_glow": "radial-gradient(circle at 50% 50%, rgba(0, 229, 153, 0.15), transparent 70%)",
+        "card_sheen": "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, transparent 100%)"
+      }
+    },
+    "layout": {
+      "spacing": {
+        "container_padding": "px-6 md:px-12 lg:px-24",
+        "section_gap": "gap-12 md:gap-24",
+        "element_gap": "gap-4 md:gap-6"
+      },
+      "grid": {
+        "main": "grid grid-cols-1 md:grid-cols-12 gap-6",
+        "bento": "grid grid-cols-1 md:grid-cols-4 gap-4 auto-rows-[minmax(180px,auto)]"
+      },
+      "container": {
+        "max_width": "max-w-7xl mx-auto",
+        "article_width": "max-w-3xl mx-auto"
+      }
+    },
+    "components": {
+      "buttons": {
+        "primary": "bg-accent-primary text-black font-bold uppercase tracking-wide hover:shadow-[0_0_20px_rgba(0,229,153,0.4)] transition-all active:scale-95 rounded-none skew-x-[-10deg]",
+        "secondary": "border border-border bg-transparent text-primary hover:bg-white/5 transition-all rounded-none uppercase tracking-widest text-xs",
+        "ghost": "text-gray-400 hover:text-white transition-colors font-mono text-sm"
+      },
+      "cards": {
+        "writeup": "group relative bg-background-surface border border-border hover:border-accent-primary/50 transition-all duration-300 p-6 overflow-hidden flex flex-col",
+        "feature": "col-span-1 md:col-span-2 row-span-2 bg-background-surface border border-border relative overflow-hidden group"
+      },
+      "inputs": {
+        "default": "bg-black/50 border-border focus:border-accent-primary focus:ring-1 focus:ring-accent-primary text-primary font-mono placeholder:text-gray-700 rounded-none h-12"
+      }
+    },
+    "visual_enhancers": {
+      "scanlines": "pointer-events-none fixed inset-0 z-50 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay",
+      "glass": "backdrop-blur-xl bg-black/60 border-b border-white/5",
+      "glitch": "animate-pulse text-accent-primary shadow-[2px_2px_0px_#ff00ff,-2px_-2px_0px_#00ffff]",
+      "terminal_cursor": "inline-block w-2.5 h-5 bg-accent-primary animate-pulse align-middle ml-1"
+    },
+    "motion": {
+      "hover": "transition-all duration-300 ease-out",
+      "page_load": "animate-in fade-in slide-in-from-bottom-4 duration-700",
+      "micro": "active:scale-95 duration-100"
+    }
+  },
+  "assets": {
+    "images": [
+      {
+        "category": "Hero Background",
+        "url": "https://images.unsplash.com/photo-1753998943918-dd2dfc4ee6ed",
+        "alt": "Cyberpunk code monitor close up",
+        "usage": "Use as a dark, blurred background for the hero section or authentication pages."
+      },
+      {
+        "category": "Feature Card 1",
+        "url": "https://images.unsplash.com/photo-1655036387197-566206c80980",
+        "alt": "Hacker setup with laptops",
+        "usage": "Use for the 'Latest Writeups' or 'Featured Challenge' card."
+      },
+      {
+        "category": "Profile/About",
+        "url": "https://images.pexels.com/photos/3148351/pexels-photo-3148351.jpeg",
+        "alt": "Anonymous hacker mask neon",
+        "usage": "Use for the user profile placeholder or 'About Me' section."
+      }
+    ],
+    "icons": {
+      "library": "lucide-react",
+      "preferred": ["Terminal", "ShieldAlert", "Cpu", "Lock", "Unlock", "Search", "Hash", "Code2", "Ghost"]
+    }
+  },
+  "instructions_to_main_agent": [
+    "PHASE 1: SETUP - Install fonts (Unbounded, JetBrains Mono, DM Sans). Update tailwind.config.js with the new color palette (obsidian background, neon green accent).",
+    "PHASE 2: LAYOUT - Build the 'Shell' (Navbar, Footer). Navbar should be sticky with a glass effect. Footer should be large (py-20) with ASCII art logo if possible.",
+    "PHASE 3: HOMEPAGE - Implement a 'Bento Grid' for recent writeups. Hero section should feel like a terminal booting up.",
+    "PHASE 4: WRITEUP VIEW - This is the core product. Text readability is paramount. Center the markdown content (max-w-3xl). Use 'prose-invert' from Tailwind typography but customize code blocks to look like VS Code (dark theme).",
+    "PHASE 5: ARCHIVE - Searchable list. Use a 'Command Palette' style search bar (CMD+K vibe).",
+    "CRITICAL: Do NOT use standard Shadcn cards. Strip the radius (rounded-none or rounded-sm). Use borders instead of shadows.",
+    "CRITICAL: Every writeup card needs a difficulty indicator (Easy/Medium/Hard) colored Green/Yellow/Red.",
+    "CRITICAL: Add a 'Copy Code' button to every code block in the writeup view."
+  ],
+  "universal_guidelines": [
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
+    "Don't make generic centered layouts. Use asymmetry.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "You MUST NOT apply universal transition (transition: all).",
+    "You MUST NOT center align the app container.",
+    "Always use modern button styles (sharp edges for this cyberpunk theme).",
+    "Every interaction needs micro-animations.",
+    "Use 'sonner' for toasts.",
+    "All interactive elements MUST include data-testid attribute."
+  ]
+}
