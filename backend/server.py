@@ -266,7 +266,8 @@ async def create_writeup(writeup_data: WriteupCreate, current_user: dict = Depen
     }
     
     await db.writeups.insert_one(writeup_doc)
-    del writeup_doc["_id"] if "_id" in writeup_doc else None
+    if "_id" in writeup_doc:
+        del writeup_doc["_id"]
     
     return WriteupResponse(**writeup_doc)
 
