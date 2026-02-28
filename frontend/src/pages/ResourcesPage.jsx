@@ -106,10 +106,11 @@ const ResourcesPage = () => {
     { id: "default-6", title: "HackTricks", description: "Hacking tricks and techniques book.", url: "https://book.hacktricks.xyz", category: "tutorials" },
   ];
 
-  const displayResources = resources.length > 0 ? resources : defaultResources;
+  // Combine default resources with database resources (database resources first)
+  const allResources = [...resources, ...defaultResources.filter(d => !resources.some(r => r.url === d.url))];
   const filteredResources = filter 
-    ? displayResources.filter(r => r.category === filter)
-    : displayResources;
+    ? allResources.filter(r => r.category === filter)
+    : allResources;
 
   return (
     <div className="min-h-screen py-12" data-testid="resources-page">
