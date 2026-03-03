@@ -18,7 +18,10 @@ import {
   Tag,
   Monitor,
   Cpu,
-  Wrench
+  Wrench,
+  Coffee,
+  Linkedin,
+  Share2
 } from "lucide-react";
 
 const WriteupPage = () => {
@@ -109,14 +112,15 @@ const WriteupPage = () => {
 
   const renderMarkdown = (content) => {
     // Basic markdown to HTML
+    // IMPORTANT: Process images BEFORE links to avoid regex conflicts
     let html = content
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, '<img src="$2" alt="$1" class="writeup-image" loading="lazy" />')
       .replace(/^### (.*$)/gim, '<h3>$1</h3>')
       .replace(/^## (.*$)/gim, '<h2>$1</h2>')
       .replace(/^# (.*$)/gim, '<h1>$1</h1>')
       .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/gim, '<em>$1</em>')
       .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, '<img src="$2" alt="$1" />')
       .replace(/`([^`]+)`/gim, '<code>$1</code>')
       .replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>')
       .replace(/^---$/gim, '<hr />')
@@ -317,27 +321,61 @@ const WriteupPage = () => {
           data-testid="writeup-content"
         />
 
-        {/* Voting */}
-        <div className="flex items-center gap-4 p-6 bg-background-surface border border-border mb-12">
-          <p className="text-text-secondary text-sm font-mono mr-4">Was this helpful?</p>
-          <Button
-            variant="ghost"
-            className="text-text-muted hover:text-accent-primary"
-            onClick={() => handleVote("up")}
-            data-testid="writeup-upvote-btn"
+        {/* Voting & Share */}
+        <div className="flex flex-wrap items-center justify-between gap-4 p-6 bg-background-surface border border-border mb-12">
+          <div className="flex items-center gap-4">
+            <p className="text-text-secondary text-sm font-mono mr-4">Was this helpful?</p>
+            <Button
+              variant="ghost"
+              className="text-text-muted hover:text-accent-primary"
+              onClick={() => handleVote("up")}
+              data-testid="writeup-upvote-btn"
+            >
+              <ThumbsUp className="w-5 h-5 mr-2" />
+              {writeup.upvotes}
+            </Button>
+            <Button
+              variant="ghost"
+              className="text-text-muted hover:text-accent-danger"
+              onClick={() => handleVote("down")}
+              data-testid="writeup-downvote-btn"
+            >
+              <ThumbsDown className="w-5 h-5 mr-2" />
+              {writeup.downvotes}
+            </Button>
+          </div>
+          
+          {/* Share Button */}
+          <a
+            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded border border-[#0A66C2]/50 bg-[#0A66C2]/10 text-[#0A66C2] hover:bg-[#0A66C2] hover:text-white transition-all duration-300 font-mono text-sm group"
+            data-testid="linkedin-share-btn"
           >
-            <ThumbsUp className="w-5 h-5 mr-2" />
-            {writeup.upvotes}
-          </Button>
-          <Button
-            variant="ghost"
-            className="text-text-muted hover:text-accent-danger"
-            onClick={() => handleVote("down")}
-            data-testid="writeup-downvote-btn"
-          >
-            <ThumbsDown className="w-5 h-5 mr-2" />
-            {writeup.downvotes}
-          </Button>
+            <Linkedin className="w-4 h-4" />
+            <span className="hidden sm:inline">Share on LinkedIn</span>
+          </a>
+        </div>
+
+        {/* Support Section */}
+        <div className="mb-12" data-testid="support-section">
+          <div className="border-t border-border/50 my-8" />
+          <div className="text-center py-6">
+            <p className="text-text-muted text-sm mb-4 font-mono">
+              If this writeup helped you, consider supporting my work.
+            </p>
+            <a
+              href="https://buymeacoffee.com/maxwellferreira"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded border border-accent-primary/50 bg-accent-primary/10 text-accent-primary hover:bg-accent-primary hover:text-black transition-all duration-300 font-mono text-sm group"
+              data-testid="support-coffee-btn"
+            >
+              <Coffee className="w-5 h-5 group-hover:animate-bounce" />
+              Buy Me a Coffee
+            </a>
+          </div>
         </div>
 
         {/* Comments */}

@@ -100,13 +100,15 @@ upgrade-insecure-requests;
 ## Completed Tasks (2026-03-03)
 - Fixed "Add Resource" bug: ResourcesPage.jsx now uses adminAPI.createResource() and adminAPI.deleteResource() with proper authentication headers
 - Added Global Search feature: SearchCommand component with keyboard shortcut (Cmd/Ctrl+K), searches writeups and resources, displays results with difficulty colors and tags
+- Fixed image display in writeups: Reordered markdown regex to process images before links
+- Added "Buy Me a Coffee" integration: Header button + support section at end of every writeup (buymeacoffee.com/maxwellferreira)
+- Added LinkedIn share functionality: Share button on writeup pages + publish success modal with share option
 - All tests passing: Backend 20/20, Frontend 23/23
 
 ## Upcoming Tasks (P1-P2)
 1. "Popular Tags" section on homepage/writeups page
-2. "Total Machines Owned" counter (already showing on homepage)
-3. Difficulty distribution statistics chart
-4. Dark terminal animated header effect
+2. Difficulty distribution statistics chart
+3. Dark terminal animated header effect
 
 ## Future/Backlog
 1. Set up custom domain with HTTPS for HSTS

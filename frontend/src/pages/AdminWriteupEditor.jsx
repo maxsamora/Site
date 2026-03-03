@@ -14,6 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { 
   Save, 
@@ -22,7 +28,9 @@ import {
   Upload, 
   Image as ImageIcon,
   X,
-  Shield
+  Shield,
+  Linkedin,
+  CheckCircle
 } from "lucide-react";
 import DOMPurify from "dompurify";
 
@@ -38,6 +46,8 @@ const AdminWriteupEditor = () => {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [publishSuccess, setPublishSuccess] = useState(false);
+  const [publishedWriteupId, setPublishedWriteupId] = useState(null);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -238,10 +248,21 @@ const AdminWriteupEditor = () => {
       if (id) {
         await adminAPI.updateWriteup(id, payload, getAuthHeader());
         toast.success("Writeup updated");
+        // Show success modal for published updates
+        if (formData.published) {
+          setPublishedWriteupId(id);
+          setPublishSuccess(true);
+        }
       } else {
         const response = await adminAPI.createWriteup(payload, getAuthHeader());
         toast.success("Writeup created");
-        navigate(`/admin/writeup/${response.data.id}`);
+        // Show success modal for new published writeups
+        if (formData.published) {
+          setPublishedWriteupId(response.data.id);
+          setPublishSuccess(true);
+        } else {
+          navigate(`/admin/writeup/${response.data.id}`);
+        }
       }
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to save writeup");
@@ -250,16 +271,26 @@ const AdminWriteupEditor = () => {
     }
   };
 
+  const getWriteupUrl = () => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/writeup/${publishedWriteupId}`;
+  };
+
+  const getLinkedInShareUrl = () => {
+    return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(getWriteupUrl())}`;
+  };
+
   const renderMarkdownPreview = (content) => {
     // Sanitize HTML to prevent XSS
+    // IMPORTANT: Process images BEFORE links to avoid regex conflicts
     let html = content
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, '<img src="$2" alt="$1" class="writeup-image" loading="lazy" />')
       .replace(/^### (.*$)/gim, '<h3>$1</h3>')
       .replace(/^## (.*$)/gim, '<h2>$1</h2>')
       .replace(/^# (.*$)/gim, '<h1>$1</h1>')
       .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/gim, '<em>$1</em>')
       .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, '<img src="$2" alt="$1" />')
       .replace(/`([^`]+)`/gim, '<code>$1</code>')
       .replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>')
       .replace(/\n/gim, '<br />');
@@ -618,6 +649,55 @@ nmap -sC -sV 10.10.10.1
           </div>
         </form>
       </div>
+
+      {/* Publish Success Modal */}
+      <Dialog open={publishSuccess} onOpenChange={setPublishSuccess}>
+        <DialogContent className="bg-background-surface border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-text-primary font-heading">
+              <CheckCircle className="w-6 h-6 text-accent-primary" />
+              Writeup Published!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-text-secondary mb-6">
+              Your writeup has been published successfully. Share it with your network!
+            </p>
+            <div className="flex flex-col gap-3">
+              <a
+                href={getLinkedInShareUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded bg-[#0A66C2] text-white hover:bg-[#004182] transition-colors font-mono text-sm"
+                data-testid="publish-linkedin-share"
+              >
+                <Linkedin className="w-5 h-5" />
+                Share on LinkedIn
+              </a>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setPublishSuccess(false);
+                  if (!id) {
+                    navigate(`/admin/writeup/${publishedWriteupId}`);
+                  }
+                }}
+                className="text-text-muted hover:text-text-primary"
+              >
+                Maybe Later
+              </Button>
+              <a
+                href={getWriteupUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-center text-sm text-accent-primary hover:underline font-mono"
+              >
+                View Published Writeup
+              </a>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAdmin } from "@/context/AdminContext";
-import { Terminal, Menu, Shield, Search } from "lucide-react";
+import { Terminal, Menu, Shield, Search, Coffee } from "lucide-react";
 import { useState } from "react";
 import SearchCommand from "./SearchCommand";
 
@@ -69,6 +69,18 @@ const Navbar = () => {
               </kbd>
             </button>
             
+            {/* Buy Me a Coffee Button */}
+            <a
+              href="https://buymeacoffee.com/maxwellferreira"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 py-1.5 rounded border border-accent-primary/50 bg-accent-primary/10 text-accent-primary hover:bg-accent-primary hover:text-black transition-all duration-300 group"
+              data-testid="nav-coffee-btn"
+            >
+              <Coffee className="w-4 h-4 group-hover:animate-pulse" />
+              <span className="text-xs font-mono hidden lg:inline">Buy Me a Coffee</span>
+            </a>
+            
             {/* Admin indicator - only shown if authenticated */}
             {isAuthenticated && (
               <Link
@@ -129,6 +141,17 @@ const Navbar = () => {
                   Admin
                 </Link>
               )}
+              {/* Mobile Buy Me a Coffee */}
+              <a
+                href="https://buymeacoffee.com/maxwellferreira"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm font-mono py-2 text-accent-primary"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Coffee className="w-4 h-4" />
+                Buy Me a Coffee
+              </a>
             </div>
           </div>
         )}
