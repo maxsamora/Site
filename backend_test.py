@@ -94,13 +94,26 @@ class CTFWriteupAPITester:
         """Test stats endpoint (no auth required)"""
         success, response = self.run_test("Get Stats", "GET", "stats", 200)
         if success:
-            required_fields = ['writeup_count', 'user_count', 'popular_tags']
+            required_fields = ['machines_owned', 'difficulty_distribution', 'platform_distribution']
             for field in required_fields:
                 if field not in response:
                     self.log_test(f"Stats Response - {field} field", False, f"Missing {field} in response")
                     return False
                 else:
                     self.log_test(f"Stats Response - {field} field", True)
+            
+            # Test that difficulty_distribution has expected structure
+            if isinstance(response.get('difficulty_distribution'), dict):
+                self.log_test("Stats Response - difficulty_distribution structure", True)
+            else:
+                self.log_test("Stats Response - difficulty_distribution structure", False, "Should be a dict")
+            
+            # Test that platform_distribution has expected structure  
+            if isinstance(response.get('platform_distribution'), dict):
+                self.log_test("Stats Response - platform_distribution structure", True)
+            else:
+                self.log_test("Stats Response - platform_distribution structure", False, "Should be a dict")
+                
         return success
 
     def test_register_user(self):
@@ -173,7 +186,7 @@ class CTFWriteupAPITester:
         return self.run_test("Get Current User", "GET", "auth/me", 200)[0]
 
     def test_create_writeup(self):
-        """Test creating a writeup"""
+        """Test creating a writeup with enhanced fields"""
         if not self.token:
             self.log_test("Create Writeup", False, "No token available")
             return False, None
@@ -185,7 +198,12 @@ class CTFWriteupAPITester:
             "difficulty": "easy",
             "platform": "htb",
             "machine_name": "Lame",
+            "os_type": "linux",
             "tags": ["smb", "distcc", "linux"],
+            "skills": ["SMB Enumeration", "Distcc Exploitation"],
+            "techniques": ["Service Exploitation", "Command Injection"],
+            "cves": ["CVE-2004-2687"],
+            "tools_used": ["nmap", "smbclient", "nc"],
             "cover_image": "https://example.com/lame.png"
         }
         
@@ -199,6 +217,13 @@ class CTFWriteupAPITester:
         
         if success and 'id' in response:
             self.log_test("Writeup ID Generated", True)
+            # Test that enhanced fields are in response
+            enhanced_fields = ['skills', 'techniques', 'cves', 'os_type', 'tools_used']
+            for field in enhanced_fields:
+                if field in response:
+                    self.log_test(f"Enhanced Field - {field}", True)
+                else:
+                    self.log_test(f"Enhanced Field - {field}", False, f"Missing {field} in response")
             return True, response['id']
         elif success:
             self.log_test("Writeup ID Generated", False, "Missing ID in response")
@@ -227,7 +252,7 @@ class CTFWriteupAPITester:
         )[0]
 
     def test_search_writeups(self):
-        """Test writeup search functionality"""
+        """Test writeup search functionality with enhanced filters"""
         # Test search by title
         success1, _ = self.run_test(
             "Search Writeups by Title",
@@ -252,7 +277,29 @@ class CTFWriteupAPITester:
             200
         )
         
-        return success1 and success2 and success3
+        # Test new enhanced filters
+        success4, _ = self.run_test(
+            "Filter Writeups by OS Type",
+            "GET", 
+            "writeups?os_type=linux",
+            200
+        )
+        
+        success5, _ = self.run_test(
+            "Filter Writeups by Skill",
+            "GET",
+            "writeups?skill=SMB Enumeration",
+            200
+        )
+        
+        success6, _ = self.run_test(
+            "Filter Writeups by Technique",
+            "GET",
+            "writeups?technique=Service Exploitation",
+            200
+        )
+        
+        return success1 and success2 and success3 and success4 and success5 and success6
 
     def test_vote_writeup(self, writeup_id: str):
         """Test voting on writeup"""

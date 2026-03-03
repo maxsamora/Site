@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Eye, ThumbsUp, Calendar, Tag } from "lucide-react";
+import { Eye, ThumbsUp, Calendar, Tag, Monitor, Cpu } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const WriteupCard = ({ writeup, featured = false }) => {
@@ -16,7 +16,7 @@ const WriteupCard = ({ writeup, featured = false }) => {
   const getPlatformClass = (platform) => {
     const classes = {
       htb: "platform-htb",
-      offsec: "platform-offsec",
+      proving_grounds: "platform-pg",
       other: "platform-other"
     };
     return classes[platform] || classes.other;
@@ -25,10 +25,15 @@ const WriteupCard = ({ writeup, featured = false }) => {
   const getPlatformLabel = (platform) => {
     const labels = {
       htb: "Hack The Box",
-      offsec: "OffSec",
+      proving_grounds: "Proving Grounds",
       other: "Other"
     };
     return labels[platform] || platform;
+  };
+
+  const getOsIcon = (os) => {
+    if (os === "windows") return <Monitor className="w-3 h-3" />;
+    return <Cpu className="w-3 h-3" />;
   };
 
   const formatDate = (dateString) => {
@@ -45,20 +50,8 @@ const WriteupCard = ({ writeup, featured = false }) => {
       className={`card-writeup group ${featured ? "md:col-span-2 md:row-span-2" : ""}`}
       data-testid={`writeup-card-${writeup.id}`}
     >
-      {/* Cover Image */}
-      {writeup.cover_image && (
-        <div className="relative h-40 mb-4 overflow-hidden -mx-6 -mt-6">
-          <img 
-            src={writeup.cover_image} 
-            alt={writeup.title}
-            className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-300"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background-surface to-transparent" />
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-3">
+      {/* Header Badges */}
+      <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 flex-wrap">
           <Badge 
             variant="outline" 
@@ -72,6 +65,12 @@ const WriteupCard = ({ writeup, featured = false }) => {
           >
             {getPlatformLabel(writeup.platform)}
           </Badge>
+          {writeup.os_type && (
+            <Badge variant="outline" className="text-xs font-mono border-text-muted text-text-muted">
+              {getOsIcon(writeup.os_type)}
+              <span className="ml-1 capitalize">{writeup.os_type}</span>
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -92,6 +91,39 @@ const WriteupCard = ({ writeup, featured = false }) => {
         {writeup.description}
       </p>
 
+      {/* Skills Tags */}
+      {writeup.skills && writeup.skills.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {writeup.skills.slice(0, 3).map((skill) => (
+            <span 
+              key={skill} 
+              className="text-xs font-mono bg-accent-primary/10 text-accent-primary px-2 py-0.5"
+            >
+              {skill}
+            </span>
+          ))}
+          {writeup.skills.length > 3 && (
+            <span className="text-xs font-mono text-text-muted">
+              +{writeup.skills.length - 3}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* CVEs */}
+      {writeup.cves && writeup.cves.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {writeup.cves.slice(0, 2).map((cve) => (
+            <span 
+              key={cve} 
+              className="text-xs font-mono bg-accent-danger/10 text-accent-danger px-2 py-0.5"
+            >
+              {cve}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Tags */}
       <div className="flex flex-wrap gap-2 mb-4">
         {writeup.tags.slice(0, 3).map((tag) => (
@@ -103,11 +135,6 @@ const WriteupCard = ({ writeup, featured = false }) => {
             {tag}
           </span>
         ))}
-        {writeup.tags.length > 3 && (
-          <span className="text-xs font-mono text-text-muted">
-            +{writeup.tags.length - 3}
-          </span>
-        )}
       </div>
 
       {/* Footer */}

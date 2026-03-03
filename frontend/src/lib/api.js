@@ -10,56 +10,80 @@ const api = axios.create({
   }
 });
 
-// Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("ctf_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Auth APIs
-export const authAPI = {
-  login: (data) => api.post("/auth/login", data),
-  register: (data) => api.post("/auth/register", data),
-  me: () => api.get("/auth/me")
-};
-
-// Writeup APIs
+// Public APIs (read-only, no auth required)
 export const writeupAPI = {
   getAll: (params) => api.get("/writeups", { params }),
   getFeatured: () => api.get("/writeups/featured"),
   getOne: (id) => api.get(`/writeups/${id}`),
-  create: (data) => api.post("/writeups", data),
-  update: (id, data) => api.put(`/writeups/${id}`, data),
-  delete: (id) => api.delete(`/writeups/${id}`),
   vote: (id, vote) => api.post(`/writeups/${id}/vote?vote=${vote}`),
-  getUserVote: (id) => api.get(`/writeups/${id}/user-vote`)
 };
 
-// Comment APIs
 export const commentAPI = {
   getByWriteup: (writeupId) => api.get(`/comments/${writeupId}`),
-  create: (data) => api.post("/comments", data),
-  delete: (id) => api.delete(`/comments/${id}`)
+  create: (writeupId, data) => api.post(`/comments?writeup_id=${writeupId}`, data),
 };
 
-// Resource APIs
 export const resourceAPI = {
   getAll: (category) => api.get("/resources", { params: { category } }),
-  create: (data) => api.post("/resources", data),
-  delete: (id) => api.delete(`/resources/${id}`)
 };
 
-// Contact API
 export const contactAPI = {
   submit: (data) => api.post("/contact", data)
 };
 
-// Stats API
 export const statsAPI = {
   get: () => api.get("/stats")
 };
+
+// Admin APIs (require HTTP Basic Auth)
+export const adminAPI = {
+  verify: (authHeader) => 
+    api.get("/admin/verify", { headers: authHeader }),
+  
+  // Writeups
+  getAllWriteups: (authHeader) => 
+    api.get("/admin/writeups", { headers: authHeader }),
+  createWriteup: (data, authHeader) => 
+    api.post("/admin/writeups", data, { headers: authHeader }),
+  updateWriteup: (id, data, authHeader) => 
+    api.put(`/admin/writeups/${id}`, data, { headers: authHeader }),
+  deleteWriteup: (id, authHeader) => 
+    api.delete(`/admin/writeups/${id}`, { headers: authHeader }),
+  
+  // Resources
+  createResource: (data, authHeader) => 
+    api.post("/admin/resources", data, { headers: authHeader }),
+  deleteResource: (id, authHeader) => 
+    api.delete(`/admin/resources/${id}`, { headers: authHeader }),
+  
+  // Comments
+  deleteComment: (id, authHeader) => 
+    api.delete(`/admin/comments/${id}`, { headers: authHeader }),
+  
+  // Image upload
+  uploadImage: (file, authHeader) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post("/admin/upload", formData, {
+      headers: {
+        ...authHeader,
+        "Content-Type": "multipart/form-data"
+      }
+    });
+  }
+};
+
+// Skills and techniques constants
+export const SKILLS = [
+  "SQLi", "XSS", "SSTI", "SSRF", "LFI", "RFI", "RCE",
+  "PrivEsc", "AD", "Kerberoasting", "Pass-the-Hash",
+  "Buffer Overflow", "Deserialization", "XXE", "Command Injection"
+];
+
+export const TECHNIQUES = [
+  "Enumeration", "Lateral Movement", "Persistence",
+  "Credential Dumping", "Token Impersonation", "Pivoting",
+  "Port Forwarding", "Tunneling"
+];
 
 export default api;

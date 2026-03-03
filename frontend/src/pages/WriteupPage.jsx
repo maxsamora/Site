@@ -1,36 +1,34 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { writeupAPI, commentAPI } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import DOMPurify from "dompurify";
 import { 
   ThumbsUp, 
   ThumbsDown, 
   Eye, 
   Calendar, 
-  User, 
-  Edit, 
-  Trash2, 
-  Copy,
   ArrowLeft,
   MessageSquare,
   Send,
-  Tag
+  Tag,
+  Monitor,
+  Cpu,
+  Wrench
 } from "lucide-react";
 
 const WriteupPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
   
   const [writeup, setWriteup] = useState(null);
   const [comments, setComments] = useState([]);
-  const [userVote, setUserVote] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [newComment, setNewComment] = useState("");
+  const [newComment, setNewComment] = useState({ content: "", author_name: "" });
   const [submittingComment, setSubmittingComment] = useState(false);
 
   const fetchWriteup = useCallback(async () => {
@@ -39,7 +37,7 @@ const WriteupPage = () => {
       setWriteup(response.data);
     } catch (error) {
       console.error("Failed to fetch writeup:", error);
-      navigate("/archive");
+      navigate("/writeups");
     }
   }, [id, navigate]);
 
@@ -52,36 +50,20 @@ const WriteupPage = () => {
     }
   }, [id]);
 
-  const fetchUserVote = useCallback(async () => {
-    if (!isAuthenticated) return;
-    try {
-      const response = await writeupAPI.getUserVote(id);
-      setUserVote(response.data.vote);
-    } catch (error) {
-      console.error("Failed to fetch user vote:", error);
-    }
-  }, [id, isAuthenticated]);
-
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchWriteup(), fetchComments(), fetchUserVote()]);
+      await Promise.all([fetchWriteup(), fetchComments()]);
       setLoading(false);
     };
     loadData();
-  }, [fetchWriteup, fetchComments, fetchUserVote]);
+  }, [fetchWriteup, fetchComments]);
 
   const handleVote = async (vote) => {
-    if (!isAuthenticated) {
-      toast.error("Please login to vote");
-      return;
-    }
-
     try {
       await writeupAPI.vote(id, vote);
       await fetchWriteup();
-      await fetchUserVote();
-      toast.success(userVote === vote ? "Vote removed" : "Vote recorded");
+      toast.success("Vote recorded");
     } catch (error) {
       toast.error("Failed to vote");
     }
@@ -89,17 +71,18 @@ const WriteupPage = () => {
 
   const handleSubmitComment = async (e) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
-
-    if (!isAuthenticated) {
-      toast.error("Please login to comment");
+    if (!newComment.content.trim() || !newComment.author_name.trim()) {
+      toast.error("Please fill in all fields");
       return;
     }
 
     setSubmittingComment(true);
     try {
-      await commentAPI.create({ content: newComment, writeup_id: id });
-      setNewComment("");
+      await commentAPI.create(id, {
+        content: newComment.content,
+        author_name: newComment.author_name
+      });
+      setNewComment({ content: "", author_name: "" });
       await fetchComments();
       toast.success("Comment posted");
     } catch (error) {
@@ -109,63 +92,29 @@ const WriteupPage = () => {
     }
   };
 
-  const handleDeleteComment = async (commentId) => {
-    try {
-      await commentAPI.delete(commentId);
-      await fetchComments();
-      toast.success("Comment deleted");
-    } catch (error) {
-      toast.error("Failed to delete comment");
-    }
-  };
-
-  const handleDeleteWriteup = async () => {
-    if (!window.confirm("Are you sure you want to delete this writeup?")) return;
-
-    try {
-      await writeupAPI.delete(id);
-      toast.success("Writeup deleted");
-      navigate("/archive");
-    } catch (error) {
-      toast.error("Failed to delete writeup");
-    }
-  };
-
-  const copyCode = (code) => {
-    navigator.clipboard.writeText(code);
-    toast.success("Code copied to clipboard");
-  };
-
   const renderMarkdown = (content) => {
-    // Simple markdown renderer
+    // Basic markdown to HTML
     let html = content
-      // Headers
       .replace(/^### (.*$)/gim, '<h3>$1</h3>')
       .replace(/^## (.*$)/gim, '<h2>$1</h2>')
       .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-      // Bold
-      .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-      // Italic
-      .replace(/\*(.*)\*/gim, '<em>$1</em>')
-      // Links
+      .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/gim, '<em>$1</em>')
       .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-      // Images
       .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, '<img src="$2" alt="$1" />')
-      // Inline code
       .replace(/`([^`]+)`/gim, '<code>$1</code>')
-      // Blockquotes
       .replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>')
-      // Horizontal rule
       .replace(/^---$/gim, '<hr />')
-      // Line breaks
       .replace(/\n/gim, '<br />');
 
     // Code blocks
-    html = html.replace(/```(\w+)?\n?([\s\S]*?)```/gim, (match, lang, code) => {
-      return `<div class="code-block-wrapper"><pre><code>${code.trim()}</code></pre><button class="copy-btn btn-secondary px-2 py-1 text-xs" onclick="navigator.clipboard.writeText(\`${code.trim().replace(/`/g, '\\`')}\`)">Copy</button></div>`;
-    });
+    html = html.replace(/```(\w+)?\n?([\s\S]*?)```/gim, '<pre><code>$2</code></pre>');
 
-    return html;
+    // Sanitize to prevent XSS
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ['h1', 'h2', 'h3', 'p', 'br', 'hr', 'strong', 'em', 'a', 'code', 'pre', 'blockquote', 'img', 'ul', 'ol', 'li'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'class']
+    });
   };
 
   const getDifficultyClass = (difficulty) => {
@@ -181,7 +130,7 @@ const WriteupPage = () => {
   const getPlatformClass = (platform) => {
     const classes = {
       htb: "platform-htb",
-      offsec: "platform-offsec",
+      proving_grounds: "platform-pg",
       other: "platform-other"
     };
     return classes[platform] || classes.other;
@@ -190,7 +139,7 @@ const WriteupPage = () => {
   const getPlatformLabel = (platform) => {
     const labels = {
       htb: "Hack The Box",
-      offsec: "OffSec",
+      proving_grounds: "Proving Grounds",
       other: "Other"
     };
     return labels[platform] || platform;
@@ -225,12 +174,12 @@ const WriteupPage = () => {
       <article className="max-w-3xl mx-auto px-6">
         {/* Back Button */}
         <Link 
-          to="/archive" 
+          to="/writeups" 
           className="inline-flex items-center gap-2 text-text-muted hover:text-accent-primary transition-colors mb-8 font-mono text-sm"
           data-testid="writeup-back-btn"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Archive
+          Back to Writeups
         </Link>
 
         {/* Header */}
@@ -248,6 +197,12 @@ const WriteupPage = () => {
             >
               {getPlatformLabel(writeup.platform)}
             </Badge>
+            {writeup.os_type && (
+              <Badge variant="outline" className="text-xs font-mono border-text-muted text-text-muted">
+                {writeup.os_type === "windows" ? <Monitor className="w-3 h-3 mr-1" /> : <Cpu className="w-3 h-3 mr-1" />}
+                {writeup.os_type}
+              </Badge>
+            )}
           </div>
 
           <h1 className="font-heading font-bold text-3xl md:text-4xl text-text-primary mb-4" data-testid="writeup-title">
@@ -264,12 +219,34 @@ const WriteupPage = () => {
             {writeup.description}
           </p>
 
+          {/* Skills & CVEs */}
+          {(writeup.skills?.length > 0 || writeup.cves?.length > 0) && (
+            <div className="flex flex-wrap gap-2 mb-6">
+              {writeup.skills?.map((skill) => (
+                <span 
+                  key={skill} 
+                  className="text-xs font-mono bg-accent-primary/10 text-accent-primary px-2 py-1"
+                >
+                  {skill}
+                </span>
+              ))}
+              {writeup.cves?.map((cve) => (
+                <span 
+                  key={cve} 
+                  className="text-xs font-mono bg-accent-danger/10 text-accent-danger px-2 py-1"
+                >
+                  {cve}
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Tags */}
           <div className="flex flex-wrap gap-2 mb-6">
-            {writeup.tags.map((tag) => (
+            {writeup.tags?.map((tag) => (
               <Link
                 key={tag}
-                to={`/archive?tag=${tag}`}
+                to={`/writeups?tag=${tag}`}
                 className="text-xs font-mono bg-background-surface border border-border px-3 py-1 text-text-secondary hover:border-accent-primary hover:text-accent-primary transition-colors flex items-center gap-1"
               >
                 <Tag className="w-3 h-3" />
@@ -278,12 +255,24 @@ const WriteupPage = () => {
             ))}
           </div>
 
+          {/* Tools Used */}
+          {writeup.tools_used?.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mb-6">
+              <Wrench className="w-4 h-4 text-text-muted" />
+              <span className="text-text-muted text-xs font-mono">Tools:</span>
+              {writeup.tools_used.map((tool) => (
+                <span 
+                  key={tool} 
+                  className="text-xs font-mono text-text-muted"
+                >
+                  {tool}
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Meta */}
           <div className="flex flex-wrap items-center gap-6 text-text-muted text-sm font-mono border-t border-b border-border py-4">
-            <span className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              {writeup.author_name}
-            </span>
             <span className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               {formatDate(writeup.created_at)}
@@ -293,27 +282,6 @@ const WriteupPage = () => {
               {writeup.views} views
             </span>
           </div>
-
-          {/* Actions */}
-          {isAuthenticated && user?.id === writeup.author_id && (
-            <div className="flex gap-4 mt-4">
-              <Link to={`/edit/${writeup.id}`}>
-                <Button variant="ghost" className="text-text-secondary hover:text-accent-primary" data-testid="writeup-edit-btn">
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-              </Link>
-              <Button 
-                variant="ghost" 
-                className="text-text-secondary hover:text-accent-danger"
-                onClick={handleDeleteWriteup}
-                data-testid="writeup-delete-btn"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
-            </div>
-          )}
         </header>
 
         {/* Cover Image */}
@@ -339,7 +307,7 @@ const WriteupPage = () => {
           <p className="text-text-secondary text-sm font-mono mr-4">Was this helpful?</p>
           <Button
             variant="ghost"
-            className={`${userVote === "up" ? "text-accent-primary" : "text-text-muted"} hover:text-accent-primary`}
+            className="text-text-muted hover:text-accent-primary"
             onClick={() => handleVote("up")}
             data-testid="writeup-upvote-btn"
           >
@@ -348,7 +316,7 @@ const WriteupPage = () => {
           </Button>
           <Button
             variant="ghost"
-            className={`${userVote === "down" ? "text-accent-danger" : "text-text-muted"} hover:text-accent-danger`}
+            className="text-text-muted hover:text-accent-danger"
             onClick={() => handleVote("down")}
             data-testid="writeup-downvote-btn"
           >
@@ -364,20 +332,38 @@ const WriteupPage = () => {
             Comments ({comments.length})
           </h2>
 
-          {/* Comment Form */}
-          <form onSubmit={handleSubmitComment} className="mb-8">
+          {/* Comment Form - Public, no auth required */}
+          <form onSubmit={handleSubmitComment} className="mb-8 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                value={newComment.author_name}
+                onChange={(e) => setNewComment({ ...newComment, author_name: e.target.value })}
+                placeholder="Your name"
+                className="input-field"
+                maxLength={50}
+                data-testid="comment-name"
+              />
+              {/* Honeypot field */}
+              <input 
+                type="text" 
+                name="website" 
+                style={{ display: "none" }} 
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </div>
             <Textarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder={isAuthenticated ? "Share your thoughts or tips..." : "Login to comment"}
-              className="input-field min-h-24 mb-4"
-              disabled={!isAuthenticated}
-              data-testid="comment-input"
+              value={newComment.content}
+              onChange={(e) => setNewComment({ ...newComment, content: e.target.value })}
+              placeholder="Share your thoughts or ask a question..."
+              className="input-field min-h-24"
+              maxLength={1000}
+              data-testid="comment-content"
             />
             <Button 
               type="submit" 
               className="btn-primary"
-              disabled={!isAuthenticated || submittingComment || !newComment.trim()}
+              disabled={submittingComment || !newComment.content.trim() || !newComment.author_name.trim()}
               data-testid="comment-submit-btn"
             >
               <Send className="w-4 h-4 mr-2" />
@@ -389,26 +375,13 @@ const WriteupPage = () => {
           <div className="space-y-6" data-testid="comments-list">
             {comments.map((comment) => (
               <div key={comment.id} className="bg-background-surface border border-border p-6">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-accent-primary text-sm">
-                      @{comment.author_name}
-                    </span>
-                    <span className="text-text-muted text-xs font-mono">
-                      {formatDate(comment.created_at)}
-                    </span>
-                  </div>
-                  {isAuthenticated && user?.id === comment.author_id && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-text-muted hover:text-accent-danger"
-                      onClick={() => handleDeleteComment(comment.id)}
-                      data-testid={`delete-comment-${comment.id}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="font-mono text-accent-primary text-sm">
+                    {comment.author_name}
+                  </span>
+                  <span className="text-text-muted text-xs font-mono">
+                    {formatDate(comment.created_at)}
+                  </span>
                 </div>
                 <p className="text-text-secondary">{comment.content}</p>
               </div>

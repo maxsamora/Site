@@ -1,31 +1,25 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Terminal, Menu, User, LogOut, PenLine, BookOpen } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { useAdmin } from "@/context/AdminContext";
+import { Terminal, Menu, Shield } from "lucide-react";
 import { useState } from "react";
 
 const Navbar = () => {
-  const { user, isAuthenticated, logout } = useAuth();
-  const navigate = useNavigate();
+  const { isAuthenticated } = useAdmin();
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
   const navLinks = [
-    { to: "/archive", label: "Archive" },
+    { to: "/", label: "Home" },
+    { to: "/writeups", label: "Writeups" },
     { to: "/resources", label: "Resources" },
+    { to: "/about", label: "About" },
     { to: "/contact", label: "Contact" },
   ];
+
+  const isActive = (path) => {
+    if (path === "/") return location.pathname === "/";
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <nav className="sticky top-0 z-40 glass" data-testid="navbar">
@@ -49,81 +43,27 @@ const Navbar = () => {
               <Link
                 key={link.to}
                 to={link.to}
-                className="text-text-secondary hover:text-accent-primary transition-colors duration-300 text-sm font-mono uppercase tracking-wider"
+                className={`text-sm font-mono uppercase tracking-wider transition-colors duration-300 ${
+                  isActive(link.to) 
+                    ? "text-accent-primary" 
+                    : "text-text-secondary hover:text-accent-primary"
+                }`}
                 data-testid={`nav-link-${link.label.toLowerCase()}`}
               >
                 {link.label}
               </Link>
             ))}
-          </div>
-
-          {/* Auth Section */}
-          <div className="hidden md:flex items-center gap-4">
-            {isAuthenticated ? (
-              <>
-                <Link to="/create">
-                  <Button 
-                    className="btn-primary btn-skew"
-                    data-testid="nav-create-btn"
-                  >
-                    <span className="flex items-center gap-2">
-                      <PenLine className="w-4 h-4" />
-                      New Writeup
-                    </span>
-                  </Button>
-                </Link>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      className="text-text-secondary hover:text-accent-primary"
-                      data-testid="nav-user-menu"
-                    >
-                      <User className="w-5 h-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-background-surface border-border">
-                    <DropdownMenuItem className="text-text-secondary">
-                      <span className="font-mono text-xs text-accent-primary">@{user?.username}</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-border" />
-                    <DropdownMenuItem asChild>
-                      <Link to="/profile" className="flex items-center gap-2 cursor-pointer" data-testid="nav-profile-link">
-                        <BookOpen className="w-4 h-4" />
-                        My Writeups
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={handleLogout}
-                      className="text-accent-danger cursor-pointer"
-                      data-testid="nav-logout-btn"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Logout
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-            ) : (
-              <>
-                <Link to="/login">
-                  <Button 
-                    variant="ghost" 
-                    className="text-text-secondary hover:text-accent-primary font-mono text-sm"
-                    data-testid="nav-login-btn"
-                  >
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/register">
-                  <Button 
-                    className="btn-primary btn-skew"
-                    data-testid="nav-register-btn"
-                  >
-                    <span>Register</span>
-                  </Button>
-                </Link>
-              </>
+            
+            {/* Admin indicator - only shown if authenticated */}
+            {isAuthenticated && (
+              <Link
+                to="/admin"
+                className="flex items-center gap-1 text-sm font-mono uppercase tracking-wider text-accent-primary"
+                data-testid="nav-admin"
+              >
+                <Shield className="w-4 h-4" />
+                Admin
+              </Link>
             )}
           </div>
 
@@ -145,58 +85,26 @@ const Navbar = () => {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className="text-text-secondary hover:text-accent-primary transition-colors duration-300 text-sm font-mono uppercase tracking-wider py-2"
+                  className={`text-sm font-mono uppercase tracking-wider py-2 ${
+                    isActive(link.to) 
+                      ? "text-accent-primary" 
+                      : "text-text-secondary"
+                  }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {link.label}
                 </Link>
               ))}
-              <div className="border-t border-border pt-4 mt-2">
-                {isAuthenticated ? (
-                  <>
-                    <Link 
-                      to="/create" 
-                      className="block py-2 text-accent-primary font-mono text-sm"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      + New Writeup
-                    </Link>
-                    <Link 
-                      to="/profile" 
-                      className="block py-2 text-text-secondary font-mono text-sm"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      My Writeups
-                    </Link>
-                    <button 
-                      onClick={() => {
-                        handleLogout();
-                        setMobileMenuOpen(false);
-                      }}
-                      className="block py-2 text-accent-danger font-mono text-sm"
-                    >
-                      Logout
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link 
-                      to="/login" 
-                      className="block py-2 text-text-secondary font-mono text-sm"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Login
-                    </Link>
-                    <Link 
-                      to="/register" 
-                      className="block py-2 text-accent-primary font-mono text-sm"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Register
-                    </Link>
-                  </>
-                )}
-              </div>
+              {isAuthenticated && (
+                <Link 
+                  to="/admin"
+                  className="text-sm font-mono uppercase tracking-wider py-2 text-accent-primary flex items-center gap-1"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Shield className="w-4 h-4" />
+                  Admin
+                </Link>
+              )}
             </div>
           </div>
         )}

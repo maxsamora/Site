@@ -16,19 +16,16 @@ const Footer = () => {
                 ZeroDay<span className="text-accent-primary">.log</span>
               </span>
             </Link>
-            <p className="text-text-muted text-sm leading-relaxed max-w-md mb-6">
-              A personal blog for CTF writeups from Hack The Box, Offensive Security, 
-              and other platforms. Sharing knowledge and solutions with the infosec community.
+            <p className="text-text-muted text-sm leading-relaxed max-w-md mb-4">
+              Personal offensive security portfolio documenting CTF writeups, 
+              penetration testing research, and red team techniques.
             </p>
-            {/* ASCII Art */}
-            <pre className="text-accent-primary/30 text-xs font-mono hidden md:block">
-{`   _____ _______ ______ 
-  / ____|__   __|  ____|
- | |       | |  | |__   
- | |       | |  |  __|  
- | |____   | |  | |     
-  \\_____|  |_|  |_|     `}
-            </pre>
+            <p className="text-text-secondary text-sm font-mono">
+              Maxwell Ferreira
+            </p>
+            <p className="text-text-muted text-xs mt-1">
+              Offensive Security | Penetration Testing | Red Team
+            </p>
           </div>
 
           {/* Quick Links */}
@@ -39,10 +36,10 @@ const Footer = () => {
             <ul className="space-y-3">
               <li>
                 <Link 
-                  to="/archive" 
+                  to="/writeups" 
                   className="text-text-muted hover:text-accent-primary transition-colors duration-300 text-sm"
                 >
-                  Archive
+                  Writeups
                 </Link>
               </li>
               <li>
@@ -51,6 +48,14 @@ const Footer = () => {
                   className="text-text-muted hover:text-accent-primary transition-colors duration-300 text-sm"
                 >
                   Resources
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/about" 
+                  className="text-text-muted hover:text-accent-primary transition-colors duration-300 text-sm"
+                >
+                  About
                 </Link>
               </li>
               <li>
@@ -74,7 +79,7 @@ const Footer = () => {
                 href="https://github.com" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-text-muted hover:text-accent-primary transition-colors duration-300"
+                className="w-10 h-10 border border-border flex items-center justify-center text-text-muted hover:text-accent-primary hover:border-accent-primary transition-colors duration-300"
                 data-testid="footer-github"
               >
                 <Github className="w-5 h-5" />
@@ -83,7 +88,7 @@ const Footer = () => {
                 href="https://twitter.com" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-text-muted hover:text-accent-primary transition-colors duration-300"
+                className="w-10 h-10 border border-border flex items-center justify-center text-text-muted hover:text-accent-primary hover:border-accent-primary transition-colors duration-300"
                 data-testid="footer-twitter"
               >
                 <Twitter className="w-5 h-5" />
@@ -92,7 +97,7 @@ const Footer = () => {
                 href="https://linkedin.com" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-text-muted hover:text-accent-primary transition-colors duration-300"
+                className="w-10 h-10 border border-border flex items-center justify-center text-text-muted hover:text-accent-primary hover:border-accent-primary transition-colors duration-300"
                 data-testid="footer-linkedin"
               >
                 <Linkedin className="w-5 h-5" />
@@ -102,13 +107,16 @@ const Footer = () => {
         </div>
 
         {/* Bottom */}
-        <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-text-muted text-xs font-mono">
-            &copy; {currentYear} ZeroDay.log // All rights reserved
-          </p>
-          <p className="text-text-muted text-xs font-mono">
-            <span className="text-accent-primary">root@zerodaylog</span>:~# hack_the_planet
-          </p>
+        <div className="border-t border-border mt-12 pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-text-muted text-xs font-mono">
+              &copy; {currentYear} Maxwell Ferreira // All rights reserved
+            </p>
+            <p className="text-text-muted text-xs text-center md:text-right max-w-xl">
+              All writeups are published only for retired machines or with respect to platform policies. 
+              This content is for educational purposes only.
+            </p>
+          </div>
         </div>
       </div>
     </footer>

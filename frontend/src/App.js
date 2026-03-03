@@ -1,43 +1,42 @@
 import "@/App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from "@/context/AuthContext";
+import { AdminProvider } from "@/context/AdminContext";
 import Layout from "@/components/Layout";
 import HomePage from "@/pages/HomePage";
-import ArchivePage from "@/pages/ArchivePage";
+import WriteupsPage from "@/pages/WriteupsPage";
 import WriteupPage from "@/pages/WriteupPage";
-import LoginPage from "@/pages/LoginPage";
-import RegisterPage from "@/pages/RegisterPage";
-import CreateWriteupPage from "@/pages/CreateWriteupPage";
-import EditWriteupPage from "@/pages/EditWriteupPage";
 import ResourcesPage from "@/pages/ResourcesPage";
 import ContactPage from "@/pages/ContactPage";
-import ProfilePage from "@/pages/ProfilePage";
+import AboutPage from "@/pages/AboutPage";
+import AdminPage from "@/pages/AdminPage";
+import AdminWriteupEditor from "@/pages/AdminWriteupEditor";
 
 function App() {
   return (
-    <AuthProvider>
+    <AdminProvider>
       <BrowserRouter>
         <div className="min-h-screen bg-background">
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<HomePage />} />
-              <Route path="/archive" element={<ArchivePage />} />
+              <Route path="/writeups" element={<WriteupsPage />} />
+              <Route path="/archive" element={<WriteupsPage />} />
               <Route path="/writeup/:id" element={<WriteupPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/create" element={<CreateWriteupPage />} />
-              <Route path="/edit/:id" element={<EditWriteupPage />} />
               <Route path="/resources" element={<ResourcesPage />} />
+              <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
+              {/* Admin routes - protected by HTTP Basic Auth */}
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/writeup/new" element={<AdminWriteupEditor />} />
+              <Route path="/admin/writeup/:id" element={<AdminWriteupEditor />} />
             </Route>
           </Routes>
           <Toaster position="bottom-right" theme="dark" />
           <div className="noise-overlay" />
         </div>
       </BrowserRouter>
-    </AuthProvider>
+    </AdminProvider>
   );
 }
 
