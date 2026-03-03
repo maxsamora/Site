@@ -2,7 +2,8 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+# Use the production URL directly for testing
+BASE_URL = 'https://maxwell-security.preview.emergentagent.com'
 
 @pytest.fixture
 def api_client():

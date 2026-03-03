@@ -3,7 +3,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+BASE_URL = 'https://maxwell-security.preview.emergentagent.com'
 
 class TestPublicEndpoints:
     """Test public API endpoints that don't require authentication"""

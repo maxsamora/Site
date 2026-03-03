@@ -1,12 +1,14 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAdmin } from "@/context/AdminContext";
-import { Terminal, Menu, Shield } from "lucide-react";
+import { Terminal, Menu, Shield, Search } from "lucide-react";
 import { useState } from "react";
+import SearchCommand from "./SearchCommand";
 
 const Navbar = () => {
   const { isAuthenticated } = useAdmin();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const navLinks = [
     { to: "/", label: "Home" },
@@ -54,6 +56,19 @@ const Navbar = () => {
               </Link>
             ))}
             
+            {/* Search Button */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded border border-border hover:border-accent-primary/50 text-text-muted hover:text-accent-primary transition-all duration-300 group"
+              data-testid="nav-search-btn"
+            >
+              <Search className="w-4 h-4" />
+              <span className="text-xs font-mono hidden lg:inline">Search</span>
+              <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-text-muted group-hover:border-accent-primary/30">
+                ⌘K
+              </kbd>
+            </button>
+            
             {/* Admin indicator - only shown if authenticated */}
             {isAuthenticated && (
               <Link
@@ -68,13 +83,22 @@ const Navbar = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            className="md:hidden text-text-secondary hover:text-accent-primary"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            data-testid="nav-mobile-menu-btn"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-2 md:hidden">
+            <button
+              className="text-text-secondary hover:text-accent-primary p-2"
+              onClick={() => setSearchOpen(true)}
+              data-testid="nav-mobile-search-btn"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+            <button
+              className="text-text-secondary hover:text-accent-primary"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              data-testid="nav-mobile-menu-btn"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
@@ -109,6 +133,9 @@ const Navbar = () => {
           </div>
         )}
       </div>
+      
+      {/* Global Search Dialog */}
+      <SearchCommand open={searchOpen} setOpen={setSearchOpen} />
     </nav>
   );
 };
