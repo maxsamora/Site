@@ -1,72 +1,92 @@
-# ZeroDay.log - CTF Writeup Blog Platform
+# ZeroDay.log - Offensive Security Portfolio
 
 ## Original Problem Statement
-Build a user-friendly, clean website for posting Capture The Flag (CTF) challenges and solutions from Hack The Box and Offensive Security. User wanted a personal blog style like Medium for posting CTF writeups with dark hacker/cyberpunk theme.
+Transform ZeroDay.log from a CTF blog into a professional offensive security portfolio for Maxwell Ferreira, with comprehensive OWASP Top 10 security hardening.
 
 ## Architecture
-- **Frontend**: React 19 + Tailwind CSS + Shadcn/UI
-- **Backend**: FastAPI (Python 3.11)
+- **Frontend**: React 19 + Tailwind CSS + Shadcn/UI + DOMPurify
+- **Backend**: FastAPI (Python 3.11) with security middleware
 - **Database**: MongoDB
-- **Authentication**: JWT-based auth
+- **Authentication**: HTTP Basic Auth (admin only)
+- **Security**: OWASP Top 10 protections implemented
 
-## User Personas
-1. **Primary User (Blog Owner)**: Posts CTF writeups, manages content
-2. **Visitors**: Read writeups, search archive, use resources
+## Security Features Implemented (Jan 2026)
 
-## Core Requirements (Implemented)
-1. ✅ Homepage with hero section, featured/latest writeups, stats
-2. ✅ User authentication (register/login with JWT)
-3. ✅ Create/Edit/Delete writeups with markdown support
-4. ✅ Searchable archive with filters (difficulty, platform, tags)
-5. ✅ Individual writeup pages with comments
-6. ✅ Upvote/downvote system for writeups
-7. ✅ Resources page with CTF tools/links
-8. ✅ Contact form
-9. ✅ Responsive dark cyberpunk design
-10. ✅ Profile page showing user's writeups
+### Authentication & Access Control
+- ✅ Public auth removed (no login/register for visitors)
+- ✅ HTTP Basic Auth for admin panel
+- ✅ Credentials stored in environment variables (ADMIN_USERNAME, ADMIN_PASSWORD)
+- ✅ Rate limiting (30 requests/minute, 5 failed login attempts = lockout)
+- ✅ Optional IP allowlist support (ADMIN_IP_ALLOWLIST)
+- ✅ Session storage (not localStorage) for admin auth
+- ✅ All write/edit/delete routes require admin auth
 
-## What's Been Implemented (Jan 2026)
-- Full authentication system with JWT tokens
-- Complete CRUD for writeups with markdown content
-- Comments system on writeups
-- Voting system (upvote/downvote)
-- Search and filter functionality
-- Stats API showing writeup count, user count, popular tags
-- Resources page with default CTF resources
-- Contact form submission
-- Dark cyberpunk theme with Unbounded + JetBrains Mono fonts
+### Image Upload Security
+- ✅ UUID filenames (no original filename used)
+- ✅ MIME type validation
+- ✅ Magic byte validation (PNG, JPG, WebP only)
+- ✅ SVG blocked
+- ✅ Max size 5MB
+- ✅ Path traversal protection
+- ✅ Directory listing disabled
+- ✅ Paste and drag-drop support in editor
+
+### OWASP Top 10 Protections
+1. **Injection**: Parameterized queries (MongoDB), no eval, input sanitization
+2. **XSS**: DOMPurify sanitization, markdown sanitizer, script/event handler removal
+3. **CSRF**: Origin validation, honeypot fields
+4. **Security Misconfiguration**: Security headers (CSP, X-Frame-Options, etc.)
+5. **Rate Limiting**: 30 req/min global, 5 login attempts max
+6. **Logging**: Admin access logged, failed auth logged (no passwords)
+
+### Security Headers
+- Content-Security-Policy
+- X-Content-Type-Options: nosniff
+- X-Frame-Options: DENY
+- Referrer-Policy: no-referrer
+- X-XSS-Protection: 1; mode=block
+- Strict-Transport-Security (HTTPS)
+
+## Admin Credentials
+- Username: `maxwell`
+- Password: Check `/app/backend/.env` (auto-generated)
+- Access: `/admin`
 
 ## API Endpoints
-- POST /api/auth/register, /api/auth/login, /api/auth/me
-- GET/POST/PUT/DELETE /api/writeups
-- GET /api/writeups/featured
-- POST /api/writeups/{id}/vote
-- GET/POST/DELETE /api/comments
-- GET/POST/DELETE /api/resources
+
+### Public (No Auth)
+- GET /api/writeups, /api/writeups/featured, /api/writeups/{id}
+- GET /api/resources, /api/stats
+- GET /api/comments/{writeup_id}
 - POST /api/contact
-- GET /api/stats
+- POST /api/writeups/{id}/vote
+- POST /api/comments
 
-## P0 Features (Done)
-- [x] User registration/login
-- [x] Create and view writeups
-- [x] Archive with search
-- [x] Markdown rendering
+### Admin (HTTP Basic Auth Required)
+- GET /api/admin/verify
+- GET /api/admin/writeups
+- POST /api/admin/writeups
+- PUT /api/admin/writeups/{id}
+- DELETE /api/admin/writeups/{id}
+- POST /api/admin/resources
+- DELETE /api/admin/resources/{id}
+- DELETE /api/admin/comments/{id}
+- POST /api/admin/upload
 
-## P1 Features (Future)
-- [ ] Rich text/WYSIWYG editor option
-- [ ] Image upload for writeups (currently URL only)
-- [ ] Social login (Google/GitHub OAuth)
-- [ ] Email notifications for new writeups
-
-## P2 Features (Backlog)
-- [ ] Series/collections for related writeups
-- [ ] Syntax highlighting in code blocks
-- [ ] User following/bookmarks
-- [ ] RSS feed for new writeups
-- [ ] SEO meta tags per writeup
+## Pages
+- / - Homepage with Maxwell Ferreira identity
+- /writeups - Writeup archive with filters
+- /writeup/:id - Individual writeup with public comments/voting
+- /resources - Security resources and checklists
+- /about - Professional bio
+- /contact - Contact form
+- /admin - Admin login (HTTP Basic Auth)
+- /admin/writeup/new - Create writeup
+- /admin/writeup/:id - Edit writeup
 
 ## Next Tasks
-1. Add more writeups with real CTF content
-2. Configure custom domain if needed
-3. Set up social media links in footer
-4. Consider adding syntax highlighting library (highlight.js)
+1. Set up custom domain with HTTPS
+2. Update social media links in footer and About page
+3. Add first real CTF writeups
+4. Consider adding syntax highlighting (highlight.js)
+5. Set up backup for MongoDB data
