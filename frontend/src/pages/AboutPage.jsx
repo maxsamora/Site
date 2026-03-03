@@ -45,15 +45,25 @@ const AboutPage = () => {
   ];
 
   const certifications = [
-    { name: "OSCP+", status: "Planned" },
-    { name: "CRTO – ZeroPoint Security", status: "Planned" },
-    { name: "Pentest+ – CompTIA", status: "Planned" },
-    { name: "eJPT – eLearnSecurity", status: "Planned" },
-    { name: "eWPTXv2 – eLearnSecurity", status: "Planned" },
-    { name: "DCPT – Desec Security", status: "Planned" },
-    { name: "ITIL v3 – AXELOS", status: "Planned" },
-    { name: "COBIT 4.1 – ISACA", status: "Planned" },
-    { name: "AZ-900 – Microsoft", status: "Planned" }
+    {
+      category: "Offensive Security",
+      items: [
+        { name: "OSCP+", desc: "Offensive Security Certified Professional Plus", org: "Offensive Security" },
+        { name: "CRTO", desc: "Certified Red Team Operator", org: "ZeroPoint Security" },
+        { name: "Pentest+", desc: "CompTIA Pentest+", org: "CompTIA" },
+        { name: "eWPTXv2", desc: "Web Application Penetration Tester eXtreme", org: "eLearnSecurity" },
+        { name: "eJPT", desc: "Junior Penetration Tester", org: "eLearnSecurity" },
+        { name: "DCPT", desc: "Desec Certified Penetration Tester", org: "Desec Security" }
+      ]
+    },
+    {
+      category: "Cloud & Governance",
+      items: [
+        { name: "AZ-900", desc: "Microsoft Azure Fundamentals", org: "Microsoft" },
+        { name: "ITIL v3", desc: "ITIL v3 Foundation", org: "AXELOS" },
+        { name: "COBIT 4.1", desc: "COBIT 4.1 Foundation", org: "ISACA" }
+      ]
+    }
   ];
 
   return (
@@ -200,20 +210,28 @@ const AboutPage = () => {
                 <Award className="w-4 h-4 text-accent-primary" />
                 Certifications
               </h3>
-              <ul className="space-y-3">
-                {certifications.map((cert) => (
-                  <li key={cert.name} className="flex items-center justify-between">
-                    <span className="text-text-primary text-sm">{cert.name}</span>
-                    <span className={`text-xs font-mono px-2 py-0.5 ${
-                      cert.status === "In Progress" 
-                        ? "bg-accent-primary/20 text-accent-primary" 
-                        : "bg-background border border-border text-text-muted"
-                    }`}>
-                      {cert.status}
-                    </span>
-                  </li>
+              <div className="space-y-6">
+                {certifications.map((group) => (
+                  <div key={group.category}>
+                    <p className="text-accent-primary text-xs font-mono mb-3">{group.category}</p>
+                    <ul className="space-y-2">
+                      {group.items.map((cert) => (
+                        <li key={cert.name} className="group">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <span className="text-text-primary text-sm font-medium">{cert.name}</span>
+                              <p className="text-text-muted text-xs">{cert.org}</p>
+                            </div>
+                            <span className="text-xs font-mono px-2 py-0.5 bg-background border border-border text-text-muted">
+                              Planned
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
 
             {/* Quick Facts */}
