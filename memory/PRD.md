@@ -1,92 +1,104 @@
 # ZeroDay.log - Offensive Security Portfolio
 
 ## Original Problem Statement
-Transform ZeroDay.log from a CTF blog into a professional offensive security portfolio for Maxwell Ferreira, with comprehensive OWASP Top 10 security hardening.
+Professional offensive security portfolio for Maxwell Ferreira with comprehensive security hardening (OWASP Top 10 protections).
 
 ## Architecture
 - **Frontend**: React 19 + Tailwind CSS + Shadcn/UI + DOMPurify
 - **Backend**: FastAPI (Python 3.11) with security middleware
 - **Database**: MongoDB
-- **Authentication**: HTTP Basic Auth (admin only)
-- **Security**: OWASP Top 10 protections implemented
+- **Authentication**: HTTP Basic Auth (admin only, credentials in env vars)
 
-## Security Features Implemented (Jan 2026)
+## Security Features Implemented
 
 ### Authentication & Access Control
-- ✅ Public auth removed (no login/register for visitors)
-- ✅ HTTP Basic Auth for admin panel
-- ✅ Credentials stored in environment variables (ADMIN_USERNAME, ADMIN_PASSWORD)
-- ✅ Rate limiting (30 requests/minute, 5 failed login attempts = lockout)
-- ✅ Optional IP allowlist support (ADMIN_IP_ALLOWLIST)
-- ✅ Session storage (not localStorage) for admin auth
-- ✅ All write/edit/delete routes require admin auth
+- HTTP Basic Auth for admin panel at `/admin`
+- Credentials stored ONLY in environment variables
+- Rate limiting (30 requests/minute global)
+- Login lockout after 5 failed attempts (5 min)
+- Optional IP allowlist support
+- All write/edit/delete routes require admin auth
+- Timing-safe credential comparison
 
-### Image Upload Security
-- ✅ UUID filenames (no original filename used)
-- ✅ MIME type validation
-- ✅ Magic byte validation (PNG, JPG, WebP only)
-- ✅ SVG blocked
-- ✅ Max size 5MB
-- ✅ Path traversal protection
-- ✅ Directory listing disabled
-- ✅ Paste and drag-drop support in editor
+### Public Comment Security
+- Challenge tokens required (bot protection)
+- Rate limiting: 5 comments/minute per IP
+- Strict HTML sanitization (all HTML escaped)
+- No script tags, event handlers, or javascript: URLs allowed
+- Author names sanitized to alphanumeric only
+- IP logging for abuse monitoring (hashed for privacy)
 
-### OWASP Top 10 Protections
-1. **Injection**: Parameterized queries (MongoDB), no eval, input sanitization
-2. **XSS**: DOMPurify sanitization, markdown sanitizer, script/event handler removal
-3. **CSRF**: Origin validation, honeypot fields
-4. **Security Misconfiguration**: Security headers (CSP, X-Frame-Options, etc.)
-5. **Rate Limiting**: 30 req/min global, 5 login attempts max
-6. **Logging**: Admin access logged, failed auth logged (no passwords)
+### Content Security Policy (Strengthened)
+```
+default-src 'self';
+script-src 'self';
+style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+font-src 'self' https://fonts.gstatic.com;
+img-src 'self' data: blob:;
+connect-src 'self';
+object-src 'none';
+frame-ancestors 'none';
+base-uri 'self';
+form-action 'self';
+upgrade-insecure-requests;
+```
 
-### Security Headers
-- Content-Security-Policy
+### Additional Security Headers
 - X-Content-Type-Options: nosniff
 - X-Frame-Options: DENY
-- Referrer-Policy: no-referrer
+- Referrer-Policy: strict-origin-when-cross-origin
 - X-XSS-Protection: 1; mode=block
-- Strict-Transport-Security (HTTPS)
+- Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
+- X-Permitted-Cross-Domain-Policies: none
+- Strict-Transport-Security (on HTTPS)
 
-## Admin Credentials
-- Username: `maxwell`
-- Password: Check `/app/backend/.env` (auto-generated)
-- Access: `/admin`
+### Image Upload Security
+- UUID filenames only
+- MIME type + magic byte validation
+- PNG, JPG, WebP only (no SVG)
+- Max size 5MB
+- Path traversal protection
 
 ## API Endpoints
 
 ### Public (No Auth)
 - GET /api/writeups, /api/writeups/featured, /api/writeups/{id}
-- GET /api/resources, /api/stats
+- GET /api/resources, /api/stats, /api/challenge
 - GET /api/comments/{writeup_id}
 - POST /api/contact
-- POST /api/writeups/{id}/vote
-- POST /api/comments
+- POST /api/writeups/{id}/vote (rate limited)
+- POST /api/comments (requires challenge token, rate limited)
 
 ### Admin (HTTP Basic Auth Required)
-- GET /api/admin/verify
-- GET /api/admin/writeups
-- POST /api/admin/writeups
-- PUT /api/admin/writeups/{id}
-- DELETE /api/admin/writeups/{id}
-- POST /api/admin/resources
-- DELETE /api/admin/resources/{id}
-- DELETE /api/admin/comments/{id}
+- All /api/admin/* endpoints
 - POST /api/admin/upload
 
 ## Pages
-- / - Homepage with Maxwell Ferreira identity
+- / - Homepage
 - /writeups - Writeup archive with filters
-- /writeup/:id - Individual writeup with public comments/voting
-- /resources - Security resources and checklists
+- /writeup/:id - Individual writeup
+- /resources - Security resources
 - /about - Professional bio
 - /contact - Contact form
-- /admin - Admin login (HTTP Basic Auth)
-- /admin/writeup/new - Create writeup
-- /admin/writeup/:id - Edit writeup
+- /admin - Admin panel (protected)
+
+## Security Logging
+- All admin access logged
+- Failed login attempts logged
+- Comment submissions logged with IP hash
+- Upload attempts logged
+- Passwords/secrets NEVER logged
+
+## Environment Variables Required
+- MONGO_URL
+- DB_NAME
+- ADMIN_USERNAME
+- ADMIN_PASSWORD
+- ADMIN_IP_ALLOWLIST (optional)
+- CORS_ORIGINS
 
 ## Next Tasks
-1. Set up custom domain with HTTPS
-2. Update social media links in footer and About page
-3. Add first real CTF writeups
-4. Consider adding syntax highlighting (highlight.js)
-5. Set up backup for MongoDB data
+1. Set up custom domain with HTTPS for HSTS
+2. Add first CTF writeups
+3. Consider adding CAPTCHA for comments if spam increases
+4. Set up automated backups

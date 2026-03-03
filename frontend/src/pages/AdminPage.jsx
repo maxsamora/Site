@@ -123,7 +123,7 @@ const AdminPage = () => {
                   id="username"
                   value={loginForm.username}
                   onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                  placeholder="admin"
+                  placeholder="Enter username"
                   className="input-field pl-12"
                   required
                   autoComplete="username"
