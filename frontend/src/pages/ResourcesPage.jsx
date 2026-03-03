@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { resourceAPI } from "@/lib/api";
+import { resourceAPI, adminAPI } from "@/lib/api";
 import { useAdmin } from "@/context/AdminContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 
 const ResourcesPage = () => {
-  const { isAuthenticated } = useAdmin();
+  const { isAuthenticated, getAuthHeader } = useAdmin();
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
@@ -67,7 +67,7 @@ const ResourcesPage = () => {
   const handleCreateResource = async (e) => {
     e.preventDefault();
     try {
-      await resourceAPI.create(newResource);
+      await adminAPI.createResource(newResource, getAuthHeader());
       toast.success("Resource added!");
       setNewResource({ title: "", description: "", url: "", content: "", category: "tools" });
       setDialogOpen(false);
@@ -80,7 +80,7 @@ const ResourcesPage = () => {
   const handleDeleteResource = async (id) => {
     if (!window.confirm("Delete this resource?")) return;
     try {
-      await resourceAPI.delete(id);
+      await adminAPI.deleteResource(id, getAuthHeader());
       toast.success("Resource deleted");
       fetchResources();
     } catch (error) {

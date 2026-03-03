@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 import time
 
 class SecurityAPITester:
-    def __init__(self, base_url="https://challenge-vault-2.preview.emergentagent.com"):
+    def __init__(self, base_url="https://maxwell-security.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
