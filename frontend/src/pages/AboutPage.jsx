@@ -223,16 +223,12 @@ const AboutPage = () => {
               </h3>
               <ul className="space-y-3 text-sm">
                 <li className="flex justify-between">
-                  <span className="text-text-muted">Experience</span>
-                  <span className="text-text-primary font-mono">7+ years IT</span>
-                </li>
-                <li className="flex justify-between">
                   <span className="text-text-muted">Focus</span>
                   <span className="text-text-primary font-mono">Offensive Sec</span>
                 </li>
                 <li className="flex justify-between">
                   <span className="text-text-muted">Learning</span>
-                  <span className="text-text-primary font-mono">HTB / OSCP</span>
+                  <span className="text-text-primary font-mono">HTB / PG</span>
                 </li>
                 <li className="flex justify-between">
                   <span className="text-text-muted">Location</span>
