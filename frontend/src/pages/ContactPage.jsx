@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import SEO from "@/components/SEO";
 import { toast } from "sonner";
-import { Send, Mail, MessageSquare, Github, Twitter, Linkedin } from "lucide-react";
+import { Send, Mail, MessageSquare, Github, Linkedin } from "lucide-react";
 
 const ContactPage = () => {
   const [loading, setLoading] = useState(false);
@@ -39,7 +39,7 @@ const ContactPage = () => {
   return (
     <div className="min-h-screen py-12" data-testid="contact-page">
       <SEO 
-        title="Contact"
+        title="Ping Me"
         description="Get in touch with Maxwell Ferreira for cybersecurity consulting, collaboration, or questions about offensive security."
       />
       <div className="max-w-7xl mx-auto px-6 md:px-12">
@@ -48,10 +48,10 @@ const ContactPage = () => {
           <div>
             <div className="flex items-center gap-2 mb-2 font-mono text-sm text-text-muted">
               <span className="text-accent-primary">$</span>
-              <span>mail -s "Contact" root@zerodaylog</span>
+              <span>ping maxwell@zerodaylog</span>
             </div>
             <h1 className="font-heading font-bold text-3xl md:text-4xl text-text-primary mb-4">
-              Get In Touch
+              Ping Me
             </h1>
             <p className="text-text-secondary text-lg mb-8">
               Have a question, suggestion, or just want to say hi? 
@@ -92,15 +92,6 @@ const ContactPage = () => {
                   data-testid="contact-github"
                 >
                   <Github className="w-5 h-5" />
-                </a>
-                <a
-                  href="https://twitter.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-12 h-12 border border-border flex items-center justify-center text-text-muted hover:text-accent-primary hover:border-accent-primary transition-colors"
-                  data-testid="contact-twitter"
-                >
-                  <Twitter className="w-5 h-5" />
                 </a>
                 <a
                   href="https://linkedin.com"

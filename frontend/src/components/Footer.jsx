@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Terminal, Github, Twitter, Linkedin } from "lucide-react";
+import { Terminal, Github, Linkedin } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -83,15 +83,6 @@ const Footer = () => {
                 data-testid="footer-github"
               >
                 <Github className="w-5 h-5" />
-              </a>
-              <a 
-                href="https://twitter.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-10 h-10 border border-border flex items-center justify-center text-text-muted hover:text-accent-primary hover:border-accent-primary transition-colors duration-300"
-                data-testid="footer-twitter"
-              >
-                <Twitter className="w-5 h-5" />
               </a>
               <a 
                 href="https://linkedin.com" 

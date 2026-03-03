@@ -45,9 +45,15 @@ const AboutPage = () => {
   ];
 
   const certifications = [
-    { name: "OSCP", status: "In Progress", icon: Award },
-    { name: "CompTIA Security+", status: "Planned", icon: Shield },
-    { name: "eJPT", status: "Planned", icon: Target }
+    { name: "OSCP+", status: "Planned" },
+    { name: "CRTO – ZeroPoint Security", status: "Planned" },
+    { name: "Pentest+ – CompTIA", status: "Planned" },
+    { name: "eJPT – eLearnSecurity", status: "Planned" },
+    { name: "eWPTXv2 – eLearnSecurity", status: "Planned" },
+    { name: "DCPT – Desec Security", status: "Planned" },
+    { name: "ITIL v3 – AXELOS", status: "Planned" },
+    { name: "COBIT 4.1 – ISACA", status: "Planned" },
+    { name: "AZ-900 – Microsoft", status: "Planned" }
   ];
 
   return (
@@ -75,26 +81,20 @@ const AboutPage = () => {
             <section>
               <h2 className="font-heading font-bold text-xl text-text-primary mb-6 flex items-center gap-2">
                 <Terminal className="w-5 h-5 text-accent-primary" />
-                Professional Summary
+                About Me
               </h2>
               <div className="prose-writeup space-y-4">
                 <p className="text-text-secondary leading-relaxed">
                   I'm <span className="text-accent-primary font-bold">Maxwell Ferreira</span>, 
-                  a cybersecurity professional with <span className="text-text-primary">7+ years of experience</span> in 
-                  IT infrastructure, now transitioning into offensive security. My journey has taken me from 
-                  system administration and network management to the exciting world of penetration testing 
-                  and red team operations.
+                  a cybersecurity professional focused on offensive security and hands-on learning through CTF platforms.
                 </p>
                 <p className="text-text-secondary leading-relaxed">
-                  Currently, I'm focused on developing my offensive security skills through platforms like 
-                  Hack The Box and Offensive Security's Proving Grounds. This blog serves as my documentation 
-                  of the machines I've compromised, the techniques I've learned, and the knowledge I've gained 
-                  along the way.
+                  I regularly solve machines on Hack The Box and Proving Grounds, documenting exploitation paths 
+                  and lessons learned along the way.
                 </p>
                 <p className="text-text-secondary leading-relaxed">
-                  My goal is to become a proficient <span className="text-text-primary">penetration tester</span> and 
-                  eventually work in a <span className="text-text-primary">red team</span> role, 
-                  helping organizations identify and remediate vulnerabilities before malicious actors can exploit them.
+                  This site reflects my continuous growth in security and my commitment to sharing practical 
+                  knowledge with the community.
                 </p>
               </div>
             </section>
@@ -154,39 +154,6 @@ const AboutPage = () => {
                     </div>
                   ))}
                 </div>
-              </div>
-            </section>
-
-            {/* Career Goals */}
-            <section>
-              <h2 className="font-heading font-bold text-xl text-text-primary mb-6 flex items-center gap-2">
-                <Globe className="w-5 h-5 text-accent-primary" />
-                Career Goals
-              </h2>
-              <div className="bg-background-surface border border-border p-6">
-                <ul className="space-y-4">
-                  <li className="flex items-start gap-3">
-                    <ChevronRight className="w-5 h-5 text-accent-primary mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-text-primary font-medium">Short-term: OSCP Certification</p>
-                      <p className="text-text-muted text-sm">Complete the PWK course and pass the OSCP exam</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <ChevronRight className="w-5 h-5 text-accent-primary mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-text-primary font-medium">Mid-term: Junior Penetration Tester Role</p>
-                      <p className="text-text-muted text-sm">Join a security team and gain real-world experience</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <ChevronRight className="w-5 h-5 text-accent-primary mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-text-primary font-medium">Long-term: Red Team Operator</p>
-                      <p className="text-text-muted text-sm">Specialize in adversary simulation and red team engagements</p>
-                    </div>
-                  </li>
-                </ul>
               </div>
             </section>
           </div>
