@@ -23,6 +23,11 @@ export const commentAPI = {
   create: (writeupId, data) => api.post(`/comments?writeup_id=${writeupId}`, data),
 };
 
+// Challenge token for bot protection
+export const challengeAPI = {
+  getToken: () => api.get("/challenge"),
+};
+
 export const resourceAPI = {
   getAll: (category) => api.get("/resources", { params: { category } }),
 };

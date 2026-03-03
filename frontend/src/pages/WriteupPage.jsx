@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { writeupAPI, commentAPI } from "@/lib/api";
+import { writeupAPI, commentAPI, challengeAPI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -65,7 +65,11 @@ const WriteupPage = () => {
       await fetchWriteup();
       toast.success("Vote recorded");
     } catch (error) {
-      toast.error("Failed to vote");
+      if (error.response?.status === 429) {
+        toast.error("Too many votes. Please slow down.");
+      } else {
+        toast.error("Failed to vote");
+      }
     }
   };
 
@@ -78,15 +82,26 @@ const WriteupPage = () => {
 
     setSubmittingComment(true);
     try {
+      // Get challenge token first (bot protection)
+      const tokenResponse = await challengeAPI.getToken();
+      const challengeToken = tokenResponse.data.token;
+      
       await commentAPI.create(id, {
         content: newComment.content,
-        author_name: newComment.author_name
+        author_name: newComment.author_name,
+        challenge_token: challengeToken
       });
       setNewComment({ content: "", author_name: "" });
       await fetchComments();
       toast.success("Comment posted");
     } catch (error) {
-      toast.error("Failed to post comment");
+      if (error.response?.status === 429) {
+        toast.error("Too many comments. Please wait a minute.");
+      } else if (error.response?.data?.detail) {
+        toast.error(error.response.data.detail);
+      } else {
+        toast.error("Failed to post comment");
+      }
     } finally {
       setSubmittingComment(false);
     }

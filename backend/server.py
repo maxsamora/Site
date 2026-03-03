@@ -1,7 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Request, UploadFile, File, Header
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse, FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -12,14 +11,13 @@ import secrets
 import hashlib
 import time
 import uuid
-import imghdr
 import re
+import html
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional, Dict
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
-import asyncio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -29,10 +27,14 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Admin credentials from environment
-ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
-ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'changeme123!')
-ADMIN_IP_ALLOWLIST = os.environ.get('ADMIN_IP_ALLOWLIST', '').split(',') if os.environ.get('ADMIN_IP_ALLOWLIST') else []
+# Admin credentials from environment - NEVER expose these
+ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
+ADMIN_IP_ALLOWLIST = [ip.strip() for ip in os.environ.get('ADMIN_IP_ALLOWLIST', '').split(',') if ip.strip()]
+
+# Validate admin credentials exist
+if not ADMIN_USERNAME or not ADMIN_PASSWORD:
+    raise RuntimeError("ADMIN_USERNAME and ADMIN_PASSWORD must be set in environment variables")
 
 # Upload settings
 UPLOAD_DIR = ROOT_DIR / 'uploads'
@@ -45,11 +47,27 @@ ALLOWED_MIME_TYPES = {'image/png', 'image/jpeg', 'image/webp'}
 rate_limit_storage: Dict[str, List[float]] = defaultdict(list)
 RATE_LIMIT_WINDOW = 60  # seconds
 RATE_LIMIT_MAX_REQUESTS = 30  # requests per window
+
+# Comment-specific rate limiting
+comment_rate_limit: Dict[str, List[float]] = defaultdict(list)
+COMMENT_RATE_LIMIT_WINDOW = 60  # seconds
+COMMENT_RATE_LIMIT_MAX = 5  # comments per minute per IP
+
+# Vote rate limiting
+vote_rate_limit: Dict[str, List[float]] = defaultdict(list)
+VOTE_RATE_LIMIT_WINDOW = 60
+VOTE_RATE_LIMIT_MAX = 10  # votes per minute per IP
+
+# Admin login protection
 ADMIN_LOGIN_ATTEMPTS: Dict[str, List[float]] = defaultdict(list)
 MAX_LOGIN_ATTEMPTS = 5
 LOGIN_LOCKOUT_TIME = 300  # 5 minutes
 
-app = FastAPI(docs_url=None, redoc_url=None)  # Disable docs in production
+# Challenge token storage for bot protection
+challenge_tokens: Dict[str, float] = {}
+CHALLENGE_TOKEN_EXPIRY = 300  # 5 minutes
+
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)  # Disable all docs
 api_router = APIRouter(prefix="/api")
 security = HTTPBasic()
 
@@ -65,7 +83,7 @@ logging.basicConfig(
 logger = logging.getLogger('security')
 
 def log_admin_access(request: Request, action: str, success: bool, details: str = ""):
-    """Log admin access attempts - never log passwords"""
+    """Log admin access attempts - never log passwords or sensitive data"""
     client_ip = request.client.host if request.client else "unknown"
     log_msg = f"ADMIN_ACCESS | IP: {client_ip} | Action: {action} | Success: {success}"
     if details:
@@ -74,6 +92,15 @@ def log_admin_access(request: Request, action: str, success: bool, details: str 
         logger.info(log_msg)
     else:
         logger.warning(log_msg)
+
+def log_comment_submission(request: Request, writeup_id: str, success: bool, reason: str = ""):
+    """Log comment submissions for abuse monitoring"""
+    client_ip = request.client.host if request.client else "unknown"
+    timestamp = datetime.now(timezone.utc).isoformat()
+    log_msg = f"COMMENT | IP: {client_ip} | Writeup: {writeup_id} | Time: {timestamp} | Success: {success}"
+    if reason:
+        log_msg += f" | Reason: {reason}"
+    logger.info(log_msg)
 
 # ============= SECURITY MIDDLEWARE =============
 
@@ -84,27 +111,31 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Security headers
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=()"
+        response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
         
-        # CSP - strict but allows necessary resources
+        # Strengthened CSP - removed 'unsafe-inline' from script-src
+        # Note: 'unsafe-inline' still needed for style-src due to Tailwind/CSS-in-JS
         csp = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            "script-src 'self'; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
-            "img-src 'self' data: https: blob:; "
-            "connect-src 'self' https:; "
+            "img-src 'self' data: blob:; "
+            "connect-src 'self'; "
+            "object-src 'none'; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
-            "form-action 'self';"
+            "form-action 'self'; "
+            "upgrade-insecure-requests;"
         )
         response.headers["Content-Security-Policy"] = csp
         
         # HSTS for HTTPS
         if request.url.scheme == "https":
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
         
         return response
 
@@ -154,19 +185,19 @@ def verify_admin(request: Request, credentials: HTTPBasicCredentials = Depends(s
     client_ip = request.client.host if request.client else "unknown"
     
     # Check IP allowlist if configured
-    if ADMIN_IP_ALLOWLIST and ADMIN_IP_ALLOWLIST[0]:
+    if ADMIN_IP_ALLOWLIST:
         if client_ip not in ADMIN_IP_ALLOWLIST:
-            log_admin_access(request, "LOGIN", False, f"IP not in allowlist")
+            log_admin_access(request, "LOGIN", False, "IP not in allowlist")
             raise HTTPException(status_code=403, detail="Access denied")
     
     # Check lockout
     if check_login_lockout(client_ip):
-        log_admin_access(request, "LOGIN", False, "Account locked due to failed attempts")
+        log_admin_access(request, "LOGIN", False, "Account locked")
         raise HTTPException(status_code=429, detail="Too many failed attempts. Try again later.")
     
-    # Timing-safe comparison
-    username_correct = secrets.compare_digest(credentials.username, ADMIN_USERNAME)
-    password_correct = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
+    # Timing-safe comparison - never reveal which field is wrong
+    username_correct = secrets.compare_digest(credentials.username.encode(), ADMIN_USERNAME.encode())
+    password_correct = secrets.compare_digest(credentials.password.encode(), ADMIN_PASSWORD.encode())
     
     if not (username_correct and password_correct):
         record_failed_login(client_ip)
@@ -178,6 +209,59 @@ def verify_admin(request: Request, credentials: HTTPBasicCredentials = Depends(s
         )
     
     log_admin_access(request, "LOGIN", True)
+    return True
+
+# ============= RATE LIMITING HELPERS =============
+
+def check_comment_rate_limit(client_ip: str) -> bool:
+    """Check if IP has exceeded comment rate limit"""
+    current_time = time.time()
+    comment_rate_limit[client_ip] = [
+        t for t in comment_rate_limit[client_ip]
+        if current_time - t < COMMENT_RATE_LIMIT_WINDOW
+    ]
+    return len(comment_rate_limit[client_ip]) >= COMMENT_RATE_LIMIT_MAX
+
+def record_comment(client_ip: str):
+    """Record a comment submission"""
+    comment_rate_limit[client_ip].append(time.time())
+
+def check_vote_rate_limit(client_ip: str) -> bool:
+    """Check if IP has exceeded vote rate limit"""
+    current_time = time.time()
+    vote_rate_limit[client_ip] = [
+        t for t in vote_rate_limit[client_ip]
+        if current_time - t < VOTE_RATE_LIMIT_WINDOW
+    ]
+    return len(vote_rate_limit[client_ip]) >= VOTE_RATE_LIMIT_MAX
+
+def record_vote(client_ip: str):
+    """Record a vote"""
+    vote_rate_limit[client_ip].append(time.time())
+
+# ============= BOT PROTECTION =============
+
+def generate_challenge_token() -> str:
+    """Generate a challenge token for bot protection"""
+    token = secrets.token_urlsafe(32)
+    challenge_tokens[token] = time.time()
+    # Clean expired tokens
+    current_time = time.time()
+    expired = [t for t, ts in challenge_tokens.items() if current_time - ts > CHALLENGE_TOKEN_EXPIRY]
+    for t in expired:
+        del challenge_tokens[t]
+    return token
+
+def verify_challenge_token(token: str) -> bool:
+    """Verify and consume a challenge token"""
+    if not token or token not in challenge_tokens:
+        return False
+    token_time = challenge_tokens.get(token, 0)
+    if time.time() - token_time > CHALLENGE_TOKEN_EXPIRY:
+        if token in challenge_tokens:
+            del challenge_tokens[token]
+        return False
+    del challenge_tokens[token]  # Single use
     return True
 
 # ============= MODELS =============
@@ -238,7 +322,8 @@ class WriteupResponse(BaseModel):
 
 class CommentCreate(BaseModel):
     content: str
-    author_name: str  # Public comments don't need auth
+    author_name: str
+    challenge_token: str  # Bot protection token
 
 class CommentResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -271,30 +356,98 @@ class ResourceResponse(BaseModel):
     category: str
     created_at: str
 
-# ============= INPUT SANITIZATION =============
+# ============= INPUT SANITIZATION (STRICT) =============
+
+def sanitize_html_strict(content: str) -> str:
+    """Strict HTML sanitization - escape all HTML"""
+    if not content:
+        return content
+    return html.escape(content)
 
 def sanitize_markdown(content: str) -> str:
-    """Sanitize markdown content to prevent XSS"""
+    """Sanitize markdown content to prevent XSS - very strict"""
     if not content:
         return content
     
-    # Remove script tags and event handlers
+    # Remove ALL script-related content
     content = re.sub(r'<script[^>]*>.*?</script>', '', content, flags=re.IGNORECASE | re.DOTALL)
-    content = re.sub(r'<[^>]+on\w+\s*=', '<', content, flags=re.IGNORECASE)
+    content = re.sub(r'<script[^>]*/?>', '', content, flags=re.IGNORECASE)
     
-    # Remove javascript: and data: URLs
-    content = re.sub(r'javascript:', '', content, flags=re.IGNORECASE)
-    content = re.sub(r'data:text/html', '', content, flags=re.IGNORECASE)
+    # Remove ALL event handlers (on*)
+    content = re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', '', content, flags=re.IGNORECASE)
+    content = re.sub(r'\s+on\w+\s*=\s*[^\s>]+', '', content, flags=re.IGNORECASE)
     
-    # Remove iframe, object, embed tags
-    content = re.sub(r'<iframe[^>]*>.*?</iframe>', '', content, flags=re.IGNORECASE | re.DOTALL)
-    content = re.sub(r'<object[^>]*>.*?</object>', '', content, flags=re.IGNORECASE | re.DOTALL)
-    content = re.sub(r'<embed[^>]*>', '', content, flags=re.IGNORECASE)
+    # Remove javascript: URLs completely
+    content = re.sub(r'javascript\s*:', '', content, flags=re.IGNORECASE)
     
-    # Remove style tags with expressions
-    content = re.sub(r'expression\s*\(', '', content, flags=re.IGNORECASE)
+    # Remove vbscript: URLs
+    content = re.sub(r'vbscript\s*:', '', content, flags=re.IGNORECASE)
+    
+    # Remove data: URLs for HTML content (allow data:image)
+    content = re.sub(r'data\s*:\s*text/html', '', content, flags=re.IGNORECASE)
+    
+    # Remove dangerous tags
+    dangerous_tags = ['iframe', 'object', 'embed', 'form', 'input', 'button', 'select', 'textarea', 'style', 'link', 'meta', 'base', 'svg', 'math']
+    for tag in dangerous_tags:
+        content = re.sub(rf'<{tag}[^>]*>.*?</{tag}>', '', content, flags=re.IGNORECASE | re.DOTALL)
+        content = re.sub(rf'<{tag}[^>]*/?\s*>', '', content, flags=re.IGNORECASE)
+    
+    # Remove expression() CSS hack
+    content = re.sub(r'expression\s*\([^)]*\)', '', content, flags=re.IGNORECASE)
+    
+    # Remove -moz-binding CSS hack
+    content = re.sub(r'-moz-binding\s*:', '', content, flags=re.IGNORECASE)
+    
+    # Remove behavior CSS hack
+    content = re.sub(r'behavior\s*:', '', content, flags=re.IGNORECASE)
+    
+    # Remove url() with javascript
+    content = re.sub(r'url\s*\(\s*["\']?\s*javascript:', 'url(', content, flags=re.IGNORECASE)
     
     return content
+
+def sanitize_comment_content(content: str) -> str:
+    """Extra strict sanitization for comments - no HTML allowed"""
+    if not content:
+        return content
+    
+    # First, remove null bytes
+    content = content.replace('\x00', '')
+    
+    # Limit length
+    content = content[:2000]
+    
+    # Escape ALL HTML - comments should be plain text
+    content = html.escape(content)
+    
+    # Remove any remaining potential XSS vectors
+    content = re.sub(r'javascript\s*:', '', content, flags=re.IGNORECASE)
+    content = re.sub(r'vbscript\s*:', '', content, flags=re.IGNORECASE)
+    content = re.sub(r'data\s*:', '', content, flags=re.IGNORECASE)
+    
+    return content
+
+def sanitize_author_name(name: str) -> str:
+    """Sanitize author name - alphanumeric, spaces, and basic punctuation only"""
+    if not name:
+        return "Anonymous"
+    
+    # Remove null bytes
+    name = name.replace('\x00', '')
+    
+    # Limit length
+    name = name[:50]
+    
+    # Escape HTML
+    name = html.escape(name)
+    
+    # Remove potential XSS
+    name = re.sub(r'javascript\s*:', '', name, flags=re.IGNORECASE)
+    
+    # Only allow safe characters
+    name = re.sub(r'[^\w\s\.\-\']+', '', name)
+    
+    return name.strip() or "Anonymous"
 
 def sanitize_input(text: str) -> str:
     """Basic input sanitization"""
@@ -309,6 +462,8 @@ def sanitize_input(text: str) -> str:
 
 def get_image_type(file_bytes: bytes) -> Optional[str]:
     """Validate image by magic bytes"""
+    if len(file_bytes) < 12:
+        return None
     # PNG: 89 50 4E 47
     if file_bytes[:4] == b'\x89PNG':
         return 'png'
@@ -324,10 +479,8 @@ def is_safe_filename(filename: str) -> bool:
     """Check for path traversal attempts"""
     if not filename:
         return False
-    # Block path traversal
     if '..' in filename or '/' in filename or '\\' in filename:
         return False
-    # Block null bytes
     if '\x00' in filename:
         return False
     return True
@@ -482,35 +635,53 @@ async def get_stats():
     }
 
 @api_router.post("/contact")
-async def submit_contact(message: ContactMessage):
+async def submit_contact(message: ContactMessage, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    
     contact_doc = {
         "id": str(uuid.uuid4()),
-        "name": sanitize_input(message.name),
+        "name": sanitize_html_strict(message.name)[:100],
         "email": message.email,
-        "subject": sanitize_input(message.subject),
-        "message": sanitize_input(message.message),
+        "subject": sanitize_html_strict(message.subject)[:200],
+        "message": sanitize_html_strict(message.message)[:5000],
+        "client_ip": hashlib.sha256(client_ip.encode()).hexdigest()[:16],  # Hashed for privacy
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
     await db.contact_messages.insert_one(contact_doc)
     return {"message": "Message sent successfully"}
 
-# Public voting (simple, no auth required)
+# Challenge token endpoint for bot protection
+@api_router.get("/challenge")
+async def get_challenge_token():
+    """Get a challenge token for comment/vote submission"""
+    token = generate_challenge_token()
+    return {"token": token, "expires_in": CHALLENGE_TOKEN_EXPIRY}
+
+# Public voting with rate limiting
 @api_router.post("/writeups/{writeup_id}/vote")
 async def vote_writeup(writeup_id: str, vote: str, request: Request):
     if vote not in ["up", "down"]:
-        raise HTTPException(status_code=400, detail="Vote must be 'up' or 'down'")
+        raise HTTPException(status_code=400, detail="Invalid vote")
+    
+    client_ip = request.client.host if request.client else "unknown"
+    
+    # Check vote rate limit
+    if check_vote_rate_limit(client_ip):
+        logger.warning(f"VOTE_RATE_LIMIT | IP: {client_ip}")
+        raise HTTPException(status_code=429, detail="Too many votes. Please slow down.")
     
     writeup_id = sanitize_input(writeup_id)
     writeup = await db.writeups.find_one({"id": writeup_id, "published": True})
     if not writeup:
         raise HTTPException(status_code=404, detail="Writeup not found")
     
-    # Simple IP-based voting to prevent spam
-    client_ip = request.client.host if request.client else "unknown"
+    # IP-based voting
     vote_key = hashlib.sha256(f"{writeup_id}:{client_ip}".encode()).hexdigest()
     
     existing_vote = await db.votes.find_one({"vote_key": vote_key})
+    
+    record_vote(client_ip)
     
     if existing_vote:
         if existing_vote["vote"] == vote:
@@ -531,7 +702,7 @@ async def vote_writeup(writeup_id: str, vote: str, request: Request):
         await db.writeups.update_one({"id": writeup_id}, {"$inc": {inc_field: 1}})
         return {"message": "Vote added"}
 
-# Public comments (with captcha-like protection via honeypot)
+# Secure public comments with rate limiting and bot protection
 @api_router.post("/comments", response_model=CommentResponse)
 async def create_public_comment(
     writeup_id: str,
@@ -539,35 +710,66 @@ async def create_public_comment(
     request: Request,
     x_honeypot: Optional[str] = Header(None)
 ):
-    # Honeypot check - if filled, it's a bot
+    client_ip = request.client.host if request.client else "unknown"
+    
+    # Honeypot check
     if x_honeypot:
+        log_comment_submission(request, writeup_id, False, "Honeypot triggered")
         raise HTTPException(status_code=400, detail="Invalid request")
+    
+    # Verify challenge token (bot protection)
+    if not verify_challenge_token(comment_data.challenge_token):
+        log_comment_submission(request, writeup_id, False, "Invalid challenge token")
+        raise HTTPException(status_code=400, detail="Invalid or expired token. Please refresh and try again.")
+    
+    # Check comment rate limit
+    if check_comment_rate_limit(client_ip):
+        log_comment_submission(request, writeup_id, False, "Rate limit exceeded")
+        raise HTTPException(status_code=429, detail="Too many comments. Please wait a minute.")
     
     writeup_id = sanitize_input(writeup_id)
     writeup = await db.writeups.find_one({"id": writeup_id, "published": True})
     if not writeup:
+        log_comment_submission(request, writeup_id, False, "Writeup not found")
         raise HTTPException(status_code=404, detail="Writeup not found")
+    
+    # Strict sanitization
+    sanitized_content = sanitize_comment_content(comment_data.content)
+    sanitized_author = sanitize_author_name(comment_data.author_name)
+    
+    if not sanitized_content.strip():
+        raise HTTPException(status_code=400, detail="Comment cannot be empty")
     
     comment_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
     comment_doc = {
         "id": comment_id,
-        "content": sanitize_markdown(sanitize_input(comment_data.content)),
+        "content": sanitized_content,
         "writeup_id": writeup_id,
-        "author_name": sanitize_input(comment_data.author_name)[:50],
+        "author_name": sanitized_author,
+        "client_ip_hash": hashlib.sha256(client_ip.encode()).hexdigest()[:16],
         "created_at": now
     }
     
     await db.comments.insert_one(comment_doc)
-    return CommentResponse(**comment_doc)
+    record_comment(client_ip)
+    log_comment_submission(request, writeup_id, True)
+    
+    return CommentResponse(
+        id=comment_id,
+        content=sanitized_content,
+        writeup_id=writeup_id,
+        author_name=sanitized_author,
+        created_at=now
+    )
 
 # ============= ADMIN ROUTES (PROTECTED) =============
 
 @api_router.get("/admin/verify")
 async def verify_admin_access(request: Request, authenticated: bool = Depends(verify_admin)):
-    """Verify admin credentials"""
-    return {"authenticated": True, "message": "Admin access verified"}
+    """Verify admin credentials - returns minimal info"""
+    return {"authenticated": True}
 
 @api_router.post("/admin/writeups", response_model=WriteupResponse)
 async def admin_create_writeup(
@@ -575,7 +777,7 @@ async def admin_create_writeup(
     writeup_data: WriteupCreate,
     authenticated: bool = Depends(verify_admin)
 ):
-    log_admin_access(request, "CREATE_WRITEUP", True, f"Title: {writeup_data.title}")
+    log_admin_access(request, "CREATE_WRITEUP", True, f"Title: {writeup_data.title[:50]}")
     
     writeup_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -614,7 +816,6 @@ async def admin_get_all_writeups(
     request: Request,
     authenticated: bool = Depends(verify_admin)
 ):
-    """Get all writeups including unpublished"""
     writeups = await db.writeups.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     
     for w in writeups:
@@ -638,7 +839,7 @@ async def admin_update_writeup(
     if not writeup:
         raise HTTPException(status_code=404, detail="Writeup not found")
     
-    log_admin_access(request, "UPDATE_WRITEUP", True, f"ID: {writeup_id}")
+    log_admin_access(request, "UPDATE_WRITEUP", True, f"ID: {writeup_id[:8]}")
     
     update_data = {}
     if writeup_data.title is not None:
@@ -694,7 +895,7 @@ async def admin_delete_writeup(
     if not writeup:
         raise HTTPException(status_code=404, detail="Writeup not found")
     
-    log_admin_access(request, "DELETE_WRITEUP", True, f"ID: {writeup_id}")
+    log_admin_access(request, "DELETE_WRITEUP", True, f"ID: {writeup_id[:8]}")
     
     await db.writeups.delete_one({"id": writeup_id})
     await db.comments.delete_many({"writeup_id": writeup_id})
@@ -708,7 +909,7 @@ async def admin_create_resource(
     resource_data: ResourceCreate,
     authenticated: bool = Depends(verify_admin)
 ):
-    log_admin_access(request, "CREATE_RESOURCE", True, f"Title: {resource_data.title}")
+    log_admin_access(request, "CREATE_RESOURCE", True, f"Title: {resource_data.title[:50]}")
     
     resource_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -734,7 +935,7 @@ async def admin_delete_resource(
     authenticated: bool = Depends(verify_admin)
 ):
     resource_id = sanitize_input(resource_id)
-    log_admin_access(request, "DELETE_RESOURCE", True, f"ID: {resource_id}")
+    log_admin_access(request, "DELETE_RESOURCE", True, f"ID: {resource_id[:8]}")
     await db.resources.delete_one({"id": resource_id})
     return {"message": "Resource deleted"}
 
@@ -745,7 +946,7 @@ async def admin_delete_comment(
     authenticated: bool = Depends(verify_admin)
 ):
     comment_id = sanitize_input(comment_id)
-    log_admin_access(request, "DELETE_COMMENT", True, f"ID: {comment_id}")
+    log_admin_access(request, "DELETE_COMMENT", True, f"ID: {comment_id[:8]}")
     await db.comments.delete_one({"id": comment_id})
     return {"message": "Comment deleted"}
 
@@ -757,81 +958,64 @@ async def admin_upload_image(
     file: UploadFile = File(...),
     authenticated: bool = Depends(verify_admin)
 ):
-    # Check filename
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
     
-    # Get extension
     ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
     if ext not in ALLOWED_EXTENSIONS:
         log_admin_access(request, "UPLOAD", False, f"Invalid extension: {ext}")
-        raise HTTPException(status_code=400, detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
+        raise HTTPException(status_code=400, detail=f"Invalid file type")
     
-    # Read file
     contents = await file.read()
     
-    # Check size
     if len(contents) > MAX_UPLOAD_SIZE:
-        log_admin_access(request, "UPLOAD", False, f"File too large: {len(contents)} bytes")
-        raise HTTPException(status_code=400, detail=f"File too large. Max size: {MAX_UPLOAD_SIZE // 1024 // 1024}MB")
+        log_admin_access(request, "UPLOAD", False, "File too large")
+        raise HTTPException(status_code=400, detail="File too large")
     
-    # Validate magic bytes
     detected_type = get_image_type(contents)
     if not detected_type:
         log_admin_access(request, "UPLOAD", False, "Invalid magic bytes")
         raise HTTPException(status_code=400, detail="Invalid image file")
     
-    # Check MIME type matches
     if file.content_type not in ALLOWED_MIME_TYPES:
-        log_admin_access(request, "UPLOAD", False, f"Invalid MIME type: {file.content_type}")
+        log_admin_access(request, "UPLOAD", False, f"Invalid MIME: {file.content_type}")
         raise HTTPException(status_code=400, detail="Invalid content type")
     
-    # Generate secure filename
     secure_filename = f"{uuid.uuid4().hex}.{detected_type}"
     file_path = UPLOAD_DIR / secure_filename
     
-    # Prevent path traversal (double check)
     if not str(file_path.resolve()).startswith(str(UPLOAD_DIR.resolve())):
         log_admin_access(request, "UPLOAD", False, "Path traversal attempt")
         raise HTTPException(status_code=400, detail="Invalid file path")
     
-    # Save file
     with open(file_path, 'wb') as f:
         f.write(contents)
     
     log_admin_access(request, "UPLOAD", True, f"File: {secure_filename}")
     
-    # Return URL for markdown insertion
     return {
         "url": f"/api/uploads/{secure_filename}",
         "filename": secure_filename,
         "markdown": f"![image](/api/uploads/{secure_filename})"
     }
 
-# Serve uploads (no directory listing)
-from fastapi.responses import FileResponse
-
 @api_router.get("/uploads/{filename}")
 async def get_upload(filename: str):
-    # Sanitize filename
     if not is_safe_filename(filename):
         raise HTTPException(status_code=400, detail="Invalid filename")
     
-    # Only allow specific extensions
     ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail="Invalid file type")
     
     file_path = UPLOAD_DIR / filename
     
-    # Prevent path traversal
     if not str(file_path.resolve()).startswith(str(UPLOAD_DIR.resolve())):
         raise HTTPException(status_code=400, detail="Invalid file path")
     
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     
-    # Serve with correct content type and security headers
     content_types = {
         'png': 'image/png',
         'jpg': 'image/jpeg',
@@ -850,7 +1034,7 @@ async def get_upload(filename: str):
 
 @api_router.get("/")
 async def root():
-    return {"message": "ZeroDay.log API - Maxwell Ferreira"}
+    return {"status": "ok"}
 
 # Include router
 app.include_router(api_router)
@@ -859,7 +1043,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
