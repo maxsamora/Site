@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import SEO from "@/components/SEO";
 import { toast } from "sonner";
 import { Send, Mail, MessageSquare, Github, Twitter, Linkedin } from "lucide-react";
 
@@ -37,6 +38,10 @@ const ContactPage = () => {
 
   return (
     <div className="min-h-screen py-12" data-testid="contact-page">
+      <SEO 
+        title="Contact"
+        description="Get in touch with Maxwell Ferreira for cybersecurity consulting, collaboration, or questions about offensive security."
+      />
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24">
           {/* Left Column - Info */}

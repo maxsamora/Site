@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import SEO from "@/components/SEO";
 import {
   Select,
   SelectContent,
@@ -362,6 +363,10 @@ php://input (POST data)
 
   return (
     <div className="min-h-screen py-12" data-testid="resources-page">
+      <SEO 
+        title="Resources"
+        description="Curated offensive security tools, checklists, cheat sheets, and reference materials for penetration testing and red team operations."
+      />
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         {/* Header */}
         <div className="mb-8">

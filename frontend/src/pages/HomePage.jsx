@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { writeupAPI, statsAPI } from "@/lib/api";
 import WriteupCard from "@/components/WriteupCard";
+import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   Terminal, 
   ChevronRight, 
@@ -11,12 +13,17 @@ import {
   Server,
   Award,
   Eye,
-  TrendingUp
+  TrendingUp,
+  Tag
 } from "lucide-react";
 
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
 const HomePage = () => {
+  const navigate = useNavigate();
   const [featuredWriteups, setFeaturedWriteups] = useState([]);
   const [stats, setStats] = useState(null);
+  const [popularTags, setPopularTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [typedText, setTypedText] = useState("");
   const fullText = "Documenting real-world CTF exploitation, privilege escalation, Active Directory attacks, and offensive security research.";
@@ -24,12 +31,14 @@ const HomePage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [featuredRes, statsRes] = await Promise.all([
+        const [featuredRes, statsRes, tagsRes] = await Promise.all([
           writeupAPI.getFeatured(),
-          statsAPI.get()
+          statsAPI.get(),
+          fetch(`${API_URL}/api/tags/popular?limit=8`).then(r => r.json())
         ]);
         setFeaturedWriteups(featuredRes.data);
         setStats(statsRes.data);
+        setPopularTags(tagsRes);
       } catch (error) {
         console.error("Failed to fetch data:", error);
       } finally {
@@ -62,6 +71,7 @@ const HomePage = () => {
 
   return (
     <div className="animate-in" data-testid="home-page">
+      <SEO />
       {/* Hero Section */}
       <section className="relative overflow-hidden min-h-[80vh] flex items-center">
         <div className="hero-glow absolute inset-0" />
@@ -230,6 +240,34 @@ const HomePage = () => {
                   {s.skill}
                   <span className="text-text-muted ml-2">({s.count})</span>
                 </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Popular Tags */}
+      {popularTags?.length > 0 && (
+        <section className="py-12 border-b border-border" data-testid="popular-tags-section">
+          <div className="max-w-7xl mx-auto px-6 md:px-12">
+            <div className="flex items-center gap-2 mb-6">
+              <Tag className="w-5 h-5 text-accent-primary" />
+              <span className="text-text-muted text-sm font-mono uppercase tracking-wider">
+                Popular Tags
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {popularTags.map((t) => (
+                <Badge
+                  key={t.tag}
+                  variant="outline"
+                  className="cursor-pointer border-border hover:border-accent-primary hover:text-accent-primary transition-colors px-3 py-1.5 text-sm font-mono"
+                  onClick={() => navigate(`/writeups?tag=${encodeURIComponent(t.tag)}`)}
+                  data-testid={`tag-${t.tag}`}
+                >
+                  #{t.tag}
+                  <span className="text-text-muted ml-1.5">({t.count})</span>
+                </Badge>
               ))}
             </div>
           </div>

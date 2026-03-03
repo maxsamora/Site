@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import DOMPurify from "dompurify";
+import SEO from "@/components/SEO";
 import { 
   ThumbsUp, 
   ThumbsDown, 
@@ -190,6 +191,12 @@ const WriteupPage = () => {
 
   return (
     <div className="min-h-screen py-12" data-testid="writeup-page">
+      <SEO 
+        title={writeup.title}
+        description={writeup.description || `${writeup.title} - ${writeup.difficulty} ${writeup.platform} writeup`}
+        image={writeup.cover_image}
+        type="article"
+      />
       <article className="max-w-3xl mx-auto px-6">
         {/* Back Button */}
         <Link 

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import SEO from "@/components/SEO";
 import { 
   Terminal, 
   Shield, 
@@ -51,6 +52,10 @@ const AboutPage = () => {
 
   return (
     <div className="min-h-screen py-12" data-testid="about-page">
+      <SEO 
+        title="About"
+        description="Maxwell Ferreira - Offensive security professional specializing in penetration testing, red team operations, and CTF challenges."
+      />
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         {/* Header */}
         <div className="mb-12">

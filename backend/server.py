@@ -958,13 +958,16 @@ async def admin_upload_image(
     file: UploadFile = File(...),
     authenticated: bool = Depends(verify_admin)
 ):
+    from PIL import Image
+    import io
+    
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
     
     ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
     if ext not in ALLOWED_EXTENSIONS:
         log_admin_access(request, "UPLOAD", False, f"Invalid extension: {ext}")
-        raise HTTPException(status_code=400, detail=f"Invalid file type")
+        raise HTTPException(status_code=400, detail="Invalid file type")
     
     contents = await file.read()
     
@@ -980,6 +983,27 @@ async def admin_upload_image(
     if file.content_type not in ALLOWED_MIME_TYPES:
         log_admin_access(request, "UPLOAD", False, f"Invalid MIME: {file.content_type}")
         raise HTTPException(status_code=400, detail="Invalid content type")
+    
+    # Compress image for performance
+    try:
+        img = Image.open(io.BytesIO(contents))
+        
+        # Convert RGBA to RGB for JPEG compatibility
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+        
+        # Resize if larger than 1920px
+        max_dimension = 1920
+        if img.width > max_dimension or img.height > max_dimension:
+            img.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+        
+        # Save as WebP for better compression
+        output = io.BytesIO()
+        img.save(output, format='WEBP', quality=80, optimize=True)
+        contents = output.getvalue()
+        detected_type = 'webp'
+    except Exception as e:
+        logger.warning(f"Image compression failed, using original: {e}")
     
     secure_filename = f"{uuid.uuid4().hex}.{detected_type}"
     file_path = UPLOAD_DIR / secure_filename
@@ -1031,6 +1055,77 @@ async def get_upload(filename: str):
             "Cache-Control": "public, max-age=31536000"
         }
     )
+
+# ============= SEO ENDPOINTS =============
+
+@api_router.get("/tags/popular")
+async def get_popular_tags(limit: int = 8):
+    """Get top tags sorted by usage count"""
+    pipeline = [
+        {"$match": {"published": True}},
+        {"$unwind": "$tags"},
+        {"$group": {"_id": "$tags", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": limit}
+    ]
+    tags = await db.writeups.aggregate(pipeline).to_list(length=limit)
+    return [{"tag": t["_id"], "count": t["count"]} for t in tags]
+
+@api_router.get("/sitemap.xml")
+async def get_sitemap(request: Request):
+    """Generate XML sitemap for SEO"""
+    base_url = str(request.base_url).rstrip('/')
+    # Remove /api prefix for frontend URLs
+    frontend_url = base_url.replace('/api', '')
+    
+    # Get all published writeups
+    writeups = await db.writeups.find(
+        {"published": True},
+        {"id": 1, "updated_at": 1, "created_at": 1}
+    ).to_list(length=1000)
+    
+    xml_content = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml_content += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    
+    # Static pages
+    static_pages = ['', '/writeups', '/resources', '/about', '/contact']
+    for page in static_pages:
+        xml_content += f'''  <url>
+    <loc>{frontend_url}{page}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>\n'''
+    
+    # Writeup pages
+    for writeup in writeups:
+        updated = writeup.get('updated_at') or writeup.get('created_at', '')
+        xml_content += f'''  <url>
+    <loc>{frontend_url}/writeup/{writeup['id']}</loc>
+    <lastmod>{updated[:10] if updated else ''}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>\n'''
+    
+    xml_content += '</urlset>'
+    
+    from fastapi.responses import Response
+    return Response(content=xml_content, media_type="application/xml")
+
+@api_router.get("/robots.txt")
+async def get_robots(request: Request):
+    """Generate robots.txt for SEO"""
+    base_url = str(request.base_url).rstrip('/')
+    frontend_url = base_url.replace('/api', '')
+    
+    robots_content = f"""User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: {frontend_url}/api/sitemap.xml
+"""
+    from fastapi.responses import Response
+    return Response(content=robots_content, media_type="text/plain")
 
 @api_router.get("/")
 async def root():

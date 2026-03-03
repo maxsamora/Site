@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { writeupAPI, statsAPI } from "@/lib/api";
 import WriteupCard from "@/components/WriteupCard";
+import SEO from "@/components/SEO";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -92,6 +93,10 @@ const WriteupsPage = () => {
 
   return (
     <div className="min-h-screen py-12" data-testid="writeups-page">
+      <SEO 
+        title="Writeups"
+        description="CTF writeups and penetration testing walkthroughs. Detailed exploits for Hack The Box, Proving Grounds, and more."
+      />
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         {/* Header */}
         <div className="mb-8">
