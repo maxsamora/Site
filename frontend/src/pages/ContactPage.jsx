@@ -66,7 +66,7 @@ const ContactPage = () => {
                 </div>
                 <div>
                   <p className="text-text-muted text-xs font-mono uppercase mb-1">Email</p>
-                  <p className="text-text-primary">contact@zerodaylog.com</p>
+                  <p className="text-text-primary">maxwell.pentest@gmail.com</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">

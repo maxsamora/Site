@@ -222,8 +222,8 @@ const AboutPage = () => {
                               <span className="text-text-primary text-sm font-medium">{cert.name}</span>
                               <p className="text-text-muted text-xs">{cert.org}</p>
                             </div>
-                            <span className="text-xs font-mono px-2 py-0.5 bg-background border border-border text-text-muted">
-                              Planned
+                            <span className="text-xs font-mono px-2 py-0.5 bg-accent-primary/20 text-accent-primary">
+                              Earned
                             </span>
                           </div>
                         </li>
