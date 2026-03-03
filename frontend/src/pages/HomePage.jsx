@@ -93,14 +93,9 @@ const HomePage = () => {
                 Offensive Security | Penetration Testing | Red Team Journey
               </p>
 
-              <p className="text-text-secondary text-lg leading-relaxed mb-4 min-h-[60px]">
+              <p className="text-text-secondary text-lg leading-relaxed mb-8 min-h-[60px]">
                 {typedText}
                 <span className="terminal-cursor" />
-              </p>
-
-              <p className="text-text-muted text-sm mb-8">
-                7+ years in IT infrastructure, now focused on breaking into offensive security.
-                Currently pursuing OSCP certification.
               </p>
 
               <div className="flex flex-wrap gap-4">
