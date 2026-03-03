@@ -10,6 +10,7 @@ import {
   CommandItem,
   CommandSeparator,
 } from "@/components/ui/command";
+import { DialogTitle } from "@/components/ui/dialog";
 import { 
   FileText, 
   Wrench, 
@@ -17,7 +18,8 @@ import {
   Tag, 
   Shield,
   Clock,
-  ExternalLink
+  ExternalLink,
+  AlertCircle
 } from "lucide-react";
 
 const SearchCommand = ({ open, setOpen }) => {
@@ -26,6 +28,7 @@ const SearchCommand = ({ open, setOpen }) => {
   const [writeups, setWriteups] = useState([]);
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Keyboard shortcut to open search
   useEffect(() => {
@@ -45,10 +48,12 @@ const SearchCommand = ({ open, setOpen }) => {
       if (query.length < 2) {
         setWriteups([]);
         setResources([]);
+        setError(null);
         return;
       }
 
       setLoading(true);
+      setError(null);
       try {
         const [writeupsRes, resourcesRes] = await Promise.all([
           writeupAPI.getAll({ search: query, limit: 5 }),
@@ -64,8 +69,13 @@ const SearchCommand = ({ open, setOpen }) => {
             r.description.toLowerCase().includes(query.toLowerCase())
         ).slice(0, 5);
         setResources(filteredResources);
-      } catch (error) {
-        console.error("Search failed:", error);
+      } catch (err) {
+        console.error("Search failed:", err);
+        if (err.response?.status === 429) {
+          setError("Too many requests. Please wait a moment and try again.");
+        } else {
+          setError("Search failed. Please try again.");
+        }
       } finally {
         setLoading(false);
       }
@@ -99,6 +109,7 @@ const SearchCommand = ({ open, setOpen }) => {
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
+      <DialogTitle className="sr-only">Search writeups and resources</DialogTitle>
       <div className="bg-background-surface border border-border rounded-lg overflow-hidden">
         <div className="flex items-center border-b border-border px-3">
           <Search className="mr-2 h-4 w-4 shrink-0 text-accent-primary" />
@@ -132,9 +143,20 @@ const SearchCommand = ({ open, setOpen }) => {
             </div>
           )}
 
-          {!loading && query.length >= 2 && writeups.length === 0 && resources.length === 0 && (
+          {!loading && query.length >= 2 && writeups.length === 0 && resources.length === 0 && !error && (
             <div className="py-6 text-center text-sm text-text-muted font-mono">
               <span className="text-accent-primary">$</span> No results found for "{query}"
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="py-6 text-center text-sm">
+              <div className="flex items-center justify-center gap-2 text-yellow-400 mb-2">
+                <AlertCircle className="w-4 h-4" />
+                <span className="font-mono">Warning</span>
+              </div>
+              <p className="text-text-muted">{error}</p>
             </div>
           )}
 

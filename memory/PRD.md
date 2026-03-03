@@ -99,14 +99,14 @@ upgrade-insecure-requests;
 
 ## Completed Tasks (2026-03-03)
 - Fixed "Add Resource" bug: ResourcesPage.jsx now uses adminAPI.createResource() and adminAPI.deleteResource() with proper authentication headers
-- All tests passing: Backend 20/20, Frontend 17/17
+- Added Global Search feature: SearchCommand component with keyboard shortcut (Cmd/Ctrl+K), searches writeups and resources, displays results with difficulty colors and tags
+- All tests passing: Backend 20/20, Frontend 23/23
 
 ## Upcoming Tasks (P1-P2)
-1. Global search bar for writeups
-2. "Popular Tags" section on homepage/writeups page
-3. "Total Machines Owned" counter
-4. Difficulty distribution statistics chart
-5. Dark terminal animated header effect
+1. "Popular Tags" section on homepage/writeups page
+2. "Total Machines Owned" counter (already showing on homepage)
+3. Difficulty distribution statistics chart
+4. Dark terminal animated header effect
 
 ## Future/Backlog
 1. Set up custom domain with HTTPS for HSTS
